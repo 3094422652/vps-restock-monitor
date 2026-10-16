@@ -51,34 +51,33 @@
   },
   {
     "name": "【全分类】VMISS - 洛杉矶 9929 全线",
-    "url": "https://app.vmiss.com/store/us-los-angeles-9929",
-    "stock": "category",
-    "available_pattern": "(?:Order Now|立即订购|加入购物车)",
-    "category_oos_pattern": "(?:Out of Stock|缺货|0\\s*Available|售罄)",
+    "url": "https://vpsrestock.com/vmiss/",
+    "stock": "vpsrestock",
+    "filter_pattern": "9929|US\\.LA\\.9929",
+    "vpsrestock_mode": "category",
     "buy_url": "https://app.vmiss.com/store/us-los-angeles-9929",
     "notify_above": 0,
-    "fetch": "flare"
+    "fetch": "direct"
   },
   {
     "name": "【单品精选】VMISS - 洛杉矶 9929 Core",
-    "url": "https://app.vmiss.com/store/us-los-angeles-9929",
-    "stock": "badge",
-    "verify_pattern": "US\\.LA\\.9929\\.Core|Core",
-    "oos_pattern": "US\\.LA\\.9929\\.Core[\\s\\S]{0,200}?(?:0\\s*(?:Available|台)|Out of Stock|缺货|售罄|无)",
-    "in_stock_pattern": "US\\.LA\\.9929\\.Core[\\s\\S]{0,200}?(?:Order Now|立即订购|加入购物车)",
+    "url": "https://vpsrestock.com/vmiss/",
+    "stock": "vpsrestock",
+    "filter_pattern": "US\\.LA\\.9929\\.Core|9929.*Core",
+    "vpsrestock_mode": "single",
     "buy_url": "https://app.vmiss.com/store/us-los-angeles-9929",
     "notify_above": 0,
-    "fetch": "flare"
+    "fetch": "direct"
   },
   {
     "name": "【全分类】VMISS - 洛杉矶 TRI 三网优化全线",
-    "url": "https://app.vmiss.com/store/us-los-angeles-tri",
-    "stock": "category",
-    "available_pattern": "(?:Order Now|立即订购|加入购物车)",
-    "category_oos_pattern": "(?:Out of Stock|缺货|0\\s*Available|售罄)",
+    "url": "https://vpsrestock.com/vmiss/",
+    "stock": "vpsrestock",
+    "filter_pattern": "洛杉矶.*TRI|US\\.LA\\.TRI",
+    "vpsrestock_mode": "category",
     "buy_url": "https://app.vmiss.com/store/us-los-angeles-tri",
     "notify_above": 0,
-    "fetch": "flare"
+    "fetch": "direct"
   },
   {
     "name": "【全分类】ZgoCloud - 洛杉矶 9929&CMIN2 全线",
@@ -167,44 +166,42 @@
   },
   {
     "name": "【全分类】Saltyfish 咸鱼云 - 圣何塞 9929 (Elite) 全线",
-    "url": "https://portal.saltyfish.io/store/san-jose-kvm-vps-elite-network",
-    "stock": "category",
-    "available_pattern": "(?:Order Now|立即订购|Add to Cart)",
-    "category_oos_pattern": "(?:Out of Stock|缺货|0\\s*Available|售罄)",
+    "url": "https://vpsrestock.com/saltyfish/",
+    "stock": "vpsrestock",
+    "filter_pattern": "San Jose Elite|sjc\\.e1",
+    "vpsrestock_mode": "category",
     "buy_url": "https://portal.saltyfish.io/store/san-jose-kvm-vps-elite-network",
     "notify_above": 0,
-    "fetch": "flare"
+    "fetch": "direct"
   },
   {
     "name": "【单品精选】Saltyfish 咸鱼云 - 圣何塞 9929 mini款 (sjc.e1.mini)",
-    "url": "https://portal.saltyfish.io/store/san-jose-kvm-vps-elite-network",
-    "stock": "badge",
-    "verify_pattern": "(?:sjc[.\\s-]*e[0-9]?[.\\s-]*mini|Elite[\\s\\S]{0,30}mini)",
-    "oos_pattern": "(?:sjc[.\\s-]*e[0-9]?[.\\s-]*mini|mini)[\\s\\S]{0,250}?(?:0\\s*Available|Out of Stock|缺货|售罄|无货)",
-    "in_stock_pattern": "(?:sjc[.\\s-]*e[0-9]?[.\\s-]*mini|mini)[\\s\\S]{0,250}?(?:Order Now|立即订购|Add to Cart)",
+    "url": "https://vpsrestock.com/saltyfish/",
+    "stock": "vpsrestock",
+    "filter_pattern": "sjc\\.e1\\.mini",
+    "vpsrestock_mode": "single",
     "buy_url": "https://portal.saltyfish.io/store/san-jose-kvm-vps-elite-network",
     "notify_above": 0,
-    "fetch": "flare"
+    "fetch": "direct"
   },
   {
     "name": "【全分类】V.PS - 圣何塞 9929 Cloud KVM 全线",
-    "url": "https://vps.hosting/cart/san-jose-cloud-kvm-vps/",
-    "stock": "category",
-    "available_pattern": "(?:Order Now|Order|Select|立即订购)",
-    "category_oos_pattern": "(?:Out of Stock|缺货|0\\s*Available|Sold Out)",
+    "url": "https://vpsrestock.com/xtom/",
+    "stock": "vpsrestock",
+    "filter_pattern": "San Jose",
+    "vpsrestock_mode": "category",
     "buy_url": "https://vps.hosting/cart/san-jose-cloud-kvm-vps/",
     "notify_above": 0,
-    "fetch": "flare"
+    "fetch": "direct"
   },
   {
     "name": "【单品精选】V.PS - 圣何塞 9929 Starter特惠",
-    "url": "https://vps.hosting/cart/san-jose-cloud-kvm-vps/",
-    "stock": "badge",
-    "verify_pattern": "Starter",
-    "oos_pattern": "Starter[\\s\\S]{0,200}?(?:Out of Stock|0 Available|Sold Out|缺货)",
-    "in_stock_pattern": "Starter[\\s\\S]{0,200}?(?:Order Now|Order|Select|立即订购)",
+    "url": "https://vpsrestock.com/xtom/",
+    "stock": "vpsrestock",
+    "filter_pattern": "San Jose.*Starter",
+    "vpsrestock_mode": "single",
     "buy_url": "https://vps.hosting/cart/san-jose-cloud-kvm-vps/",
     "notify_above": 0,
-    "fetch": "flare"
+    "fetch": "direct"
   }
 ]

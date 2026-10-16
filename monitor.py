@@ -278,11 +278,65 @@ def compute_stock(target, text=None):
     if mode == "json":
         return compute_stock_json(target, data=text if isinstance(text, dict) else None)
 
+    if mode == "vpsrestock":
+        return compute_stock_vpsrestock(target, text)
+
     if "pattern" in target and target["pattern"]:
         m = re.search(target["pattern"], text)
         return int(m.group(1)) if m else None
 
     return 1
+
+
+def compute_stock_vpsrestock(target, html):
+    """解析专业 VPS 现货镜像站 (vpsrestock) 的 Schema.org JSON 与 DOM 行，毫秒级获取状态"""
+    products = {}
+    scripts = re.findall(r'<script[^>]*>([\s\S]*?)</script>', html)
+    for s in scripts:
+        if '"ItemList"' in s:
+            try:
+                data = json.loads(s)
+                for item in data.get("itemListElement", []):
+                    prod = item.get("item", {})
+                    if prod and "name" in prod:
+                        name = prod["name"]
+                        avail = prod.get("offers", {}).get("availability", "")
+                        in_stock = 1 if "InStock" in avail else 0
+                        key = re.sub(r"[\s·・\-_]+", " ", name).lower().strip()
+                        products[key] = (name, in_stock)
+            except Exception:
+                pass
+
+    row_pattern = r'<div class="row\s+([^"]+)"[\s\S]*?<div class="name">([\s\S]*?)</div>'
+    for m in re.finditer(row_pattern, html):
+        cls, n_html = m.group(1), m.group(2)
+        clean_name = re.sub(r"<[^>]+>", " ", n_html).strip()
+        clean_name = re.sub(r"\s+", " ", clean_name)
+        in_stock = 1 if "in" in cls.split() else 0
+        key = re.sub(r"[\s·・\-_]+", " ", clean_name).lower().strip()
+        if key not in products:
+            products[key] = (clean_name, in_stock)
+
+    if not products:
+        log(f"[warn] {target['name']}: vpsrestock 页面未解析到任何商品")
+        return None
+
+    pat = target.get("filter_pattern", "")
+    mode = target.get("vpsrestock_mode", "single")
+
+    matching = [(disp, st) for key, (disp, st) in products.items() if re.search(pat, disp, re.I)]
+    if not matching:
+        log(f"[warn] {target['name']}: 未在列表中匹配到指定特征({pat})")
+        return None
+
+    if mode == "single":
+        return 1 if any(st == 1 for _, st in matching) else 0
+    else:
+        in_stock_count = sum(st for _, st in matching)
+        in_stock_names = [disp for disp, st in matching if st == 1]
+        if in_stock_names:
+            target["_detail"] = "在售型号:\n" + "\n".join(f"· {n}" for n in in_stock_names)
+        return in_stock_count
 
 
 # ---- panstar.ai JSON 接口（响应 AES-256-GCM 加密，密钥来自其前端 JS）----
@@ -392,9 +446,9 @@ def compute_stock_json(target, data=None):
 
 def stock_text(target, n):
     mode = target.get("stock", "count")
-    if mode == "badge":
+    if mode == "badge" or (mode == "vpsrestock" and target.get("vpsrestock_mode") == "single"):
         return "有货" if n else "缺货 (0 Available)"
-    if mode == "category" or target.get("json_pick") == "count_in_stock":
+    if mode == "category" or target.get("json_pick") == "count_in_stock" or (mode == "vpsrestock" and target.get("vpsrestock_mode") == "category"):
         return f"有货 ({n} 款在售/补货)" if n else "全分类售罄"
     return f"{n} 台"
 
@@ -665,7 +719,8 @@ def main():
     last_beat = start
     while True:
         cycle_start = time.time()
-        cache = {}
+        raw_cache = {}
+        text_cache = {}
         json_cache = {}
         failed_keys = set()
         dirty = False
@@ -682,9 +737,14 @@ def main():
                     key = t["url"]
                     if key in failed_keys:
                         continue
-                    if key not in cache:
-                        cache[key] = visible_text(fetch_html(t))
-                    n = compute_stock(t, cache[key])
+                    if key not in raw_cache:
+                        raw_cache[key] = fetch_html(t)
+                    if t.get("stock") == "vpsrestock":
+                        n = compute_stock(t, raw_cache[key])
+                    else:
+                        if key not in text_cache:
+                            text_cache[key] = visible_text(raw_cache[key])
+                        n = compute_stock(t, text_cache[key])
             except Exception as e:
                 err_key = (t.get("json_url") or t["url"]) if t.get("stock") == "json" else t["url"]
                 failed_keys.add(err_key)
@@ -716,7 +776,7 @@ def main():
                     is_restock = True
                     restock_reason = f"缺货上架（现已可购: {stock_text(t, n)}）"
                 # 判定 2：分类模式增量补货（例如 1 款增至 3 款，说明上了特惠新款或原有缺货款恢复）
-                elif t.get("stock") == "category" and n > old > threshold:
+                elif (t.get("stock") == "category" or (t.get("stock") == "vpsrestock" and t.get("vpsrestock_mode") == "category")) and n > old > threshold:
                     is_restock = True
                     restock_reason = f"新增在售款式（由 {old} 款增至 {n} 款）"
                 # 判定 3：数字库存大幅补货（之前仅剩少量尾货 <=5 台，突然批量补充 >=5 台）
