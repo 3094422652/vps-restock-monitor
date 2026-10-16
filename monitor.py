@@ -350,9 +350,9 @@ def save_and_commit_state(state):
         # 确保无残留冲突状态
         subprocess.run(("git", "rebase", "--abort"), capture_output=True)
         subprocess.run(("git", "fetch", remote, "main"), capture_output=True)
-        # 合并远端最新数据（避免覆盖其它字段）
+        # 将本地指针重置到远端最新 commit（保证本地基于最新的 main 分支，杜绝 non-fast-forward 拒绝推送）
+        subprocess.run(("git", "reset", "--mixed", "FETCH_HEAD"), capture_output=True)
         try:
-            subprocess.run(("git", "checkout", "FETCH_HEAD", "--", "state.json"), capture_output=True)
             with open(path, "r", encoding="utf-8") as rf:
                 merged = json.load(rf)
         except Exception:
