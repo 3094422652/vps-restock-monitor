@@ -102,24 +102,23 @@
   },
   {
     "name": "【全分类】DMIT - 洛杉矶 Eyeball (9929/CMIN2) 全线",
-    "url": "https://www.dmit.io/cart.php",
-    "stock": "category",
-    "available_pattern": "(?:LAX\\.EB|Eyeball)[\\s\\S]{0,150}?(?:Order Now|立即订购)",
-    "category_oos_pattern": "(?:none-stock|Out of Stock|缺货|Sold Out)",
+    "url": "https://vpsrestock.com/dmit/",
+    "stock": "vpsrestock",
+    "filter_pattern": "LAX\\.(?:AN4|AN5|AS3)\\.EB|LAX\\..*\\.EB",
+    "vpsrestock_mode": "category",
     "buy_url": "https://www.dmit.io/cart.php",
     "notify_above": 0,
-    "fetch": "flare"
+    "fetch": "direct"
   },
   {
-    "name": "【单品精选】DMIT - 洛杉矶 Eyeball WEE ($39.9/年)",
-    "url": "https://www.dmit.io/cart.php",
-    "stock": "badge",
-    "verify_pattern": "(?:LAX[.-]EB[.-]WEE|AN4[.-]EB[.-]WEE|Eyeball[\\s\\S]{0,30}WEE)",
-    "oos_pattern": "(?:LAX\\.EB\\.WEE|AN4\\.EB\\.WEE)[\\s\\S]{0,300}?(?:none-stock|Out of Stock|缺货|Sold Out)",
-    "in_stock_pattern": "(?:LAX\\.EB\\.WEE|AN4\\.EB\\.WEE)[\\s\\S]{0,300}?(?:Order Now|立即订购)",
+    "name": "【单品精选】DMIT - 洛杉矶 Eyeball 特惠款 (TINY/Pocket/WEE)",
+    "url": "https://vpsrestock.com/dmit/",
+    "stock": "vpsrestock",
+    "filter_pattern": "LAX\\..*\\.EB\\.(?:TINY|Pocket|WEE)|(?:LAX.*EB.*WEE)",
+    "vpsrestock_mode": "single",
     "buy_url": "https://www.dmit.io/cart.php",
     "notify_above": 0,
-    "fetch": "flare"
+    "fetch": "direct"
   },
   {
     "name": "【全分类】AcckCloud - 洛杉矶 9929 全线",
