@@ -139,7 +139,8 @@ def compute_stock(target, text=None):
         # 1. 验证页面是否完整加载了目标商品信息（防止骨架屏、404、502 或未解决的验证页误判为有货）
         verify = target.get("verify_pattern")
         if verify and not re.search(verify, text, re.I):
-            log(f"[warn] {target['name']}: 页面未检测到商品特征词({verify})，渲染未就绪或页面改版，跳过本轮")
+            sample = text[:120].strip()
+            log(f"[warn] {target['name']}: 页面未检测到商品特征词({verify})。页面摘要: {sample}")
             return None
         # 2. 检查是否有明确的缺货/售罄标记
         if re.search(target["oos_pattern"], text):
@@ -154,7 +155,8 @@ def compute_stock(target, text=None):
             # 验证页面是否真的是“全部分类售罄”，还是页面没加载出来
             oos_check = target.get("category_oos_pattern", r"(?:缺货|售罄|已售罄|无货|Out of Stock|Sold Out|0\s*(?:Available|台)|Unavailable)")
             if not re.search(oos_check, text, re.I):
-                log(f"[warn] {target['name']}: 分类页未检测到任何商品或售罄标记，疑似渲染未就绪，跳过本轮")
+                sample = text[:120].strip()
+                log(f"[warn] {target['name']}: 分类页未检测到任何商品或售罄标记。页面摘要: {sample}")
                 return None
         return count
 
