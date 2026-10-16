@@ -367,14 +367,30 @@ def tg_send(text):
         log("[tg] 发送失败:", repr(e))
 
 
+def clean_body_title(title, body):
+    """去除正文开头可能冗余重复的标题行"""
+    if not body:
+        return ""
+    lines = body.strip().split("\n")
+    t_clean = re.sub(r"^[#\s🚨🟢💓·*]+", "", title).strip()
+    first_clean = re.sub(r"^[#\s🚨🟢💓·*]+", "", lines[0]).strip()
+    if t_clean and (t_clean in first_clean or first_clean in t_clean):
+        lines = lines[1:]
+        while lines and not lines[0].strip():
+            lines = lines[1:]
+        return "\n".join(lines)
+    return body.strip()
+
+
 def weixin_send(title, body):
     """通过 PushPlus / Server酱 推微信。优先使用 PushPlus（每日200条），未配置时回退到 Server酱。"""
     sent = False
+    body = clean_body_title(title, body)
     if body:
         if body.startswith("http://") or body.startswith("https://"):
-            full_body = f"### {title}\n\n🛒 **购买直链**：[{body}]({body})"
+            full_body = f"🛒 **购买直链**：[{body}]({body})"
         else:
-            full_body = f"### {title}\n\n{body}"
+            full_body = body
     else:
         full_body = title
 
@@ -404,7 +420,7 @@ def weixin_send(title, body):
 
     if SERVERCHAN_KEY:
         try:
-            # Server酱标题限制32字符，若超长保留31字加省略号，并在正文中完整呈现商品名与直达链接
+            # Server酱标题限制32字符，若超长保留31字加省略号，并在正文中呈现内容
             short_title = title if len(title) <= 32 else (title[:31] + "…")
             data = urllib.parse.urlencode({"title": short_title, "desp": full_body}).encode()
             req = urllib.request.Request(
@@ -426,9 +442,10 @@ def weixin_send(title, body):
 
 def notify(title, body, weixin=True):
     """多渠道通知：Telegram + 微信（Server酱/PushPlus）。心跳类消息可指定 weixin=False 省额度。"""
-    tg_send(f"{title}\n{body}" if body else title)
+    clean_body = clean_body_title(title, body)
+    tg_send(f"{title}\n\n{clean_body}" if clean_body else title)
     if weixin:
-        weixin_send(title, body)
+        weixin_send(title, clean_body)
 
 
 def load_targets():
@@ -640,12 +657,14 @@ def main():
                         buy_link = t.get("buy_url", t.get("url", ""))
 
                         card_lines = [
-                            f"### 🚨 {t['name']} 补货啦！",
                             f"- ⏱ **检测时间**：{bj_time} (北京时间)",
                             f"- 📦 **变动详情**：{restock_reason}",
                         ]
                         if detail:
-                            card_lines.append(f"- 📋 **套餐信息**：{detail}")
+                            if "\n" in detail:
+                                card_lines.append(f"- 📋 **套餐在售明细**：\n{detail}")
+                            else:
+                                card_lines.append(f"- 📋 **套餐信息**：{detail}")
                         card_lines.append(f"- 🛒 **购买直链**：[点击立即前往官网购买]({buy_link})")
                         card_lines.append("\n*(热门套餐库存极快耗尽，建议点击直链迅速锁定订单)*")
 
