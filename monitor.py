@@ -110,7 +110,7 @@ def http_get(url, timeout=25):
         return raw.decode("utf-8", "replace")
 
 
-def cf_worker_get(url, timeout=25):
+def cf_worker_get(url, timeout=10):
     if not CF_WORKER_URL:
         raise RuntimeError("未配置 CF_WORKER_URL")
     proxy_url = f"{CF_WORKER_URL}?url={urllib.parse.quote(url)}"
@@ -145,12 +145,18 @@ def flare_get(url):
                     pass
                 _flare_ready = True
             data = _flare_post({"cmd": "request.get", "url": url,
-                                "session": FLARE_SESSION, "maxTimeout": 45000})
+                                "session": FLARE_SESSION, "maxTimeout": 18000})
             if data.get("status") == "ok":
                 return data["solution"]["response"]
-            log(f"[flare] 质询未通过({str(data.get('message'))[:60]})，重建会话重试...")
+
+            msg = str(data.get("message", ""))
+            # 若触发硬性质询超时或已被 Cloudflare 标记阻断，立即快速失败转备用/跳过，不作无意义的二次死等
+            if any(k in msg.lower() for k in ("blocked", "banned", "timeout", "turnstile")):
+                raise RuntimeError(f"Cloudflare 阻断或超时: {msg[:60]}")
+            log(f"[flare] 质询未通过({msg[:60]})，重建会话重试...")
         except Exception as e:
-            if attempt == 1:
+            err_str = str(e).lower()
+            if attempt == 1 or any(k in err_str for k in ("blocked", "banned", "timeout", "turnstile")):
                 raise
             log(f"[flare] 请求异常({e})，重建会话重试...")
 
