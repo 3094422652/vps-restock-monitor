@@ -140,16 +140,38 @@ def compute_stock(target, text=None):
     mode = target.get("stock", "count")
 
     if mode == "badge":
-        # 1. 验证页面是否完整加载了目标商品信息（防止骨架屏、404、502 或未解决的验证页误判为有货）
+        # 1. 验证目标商品是否渲染在页面上（第一道防线）
         verify = target.get("verify_pattern")
         if verify and not re.search(verify, text, re.I):
             sample = text[:120].strip()
             log(f"[warn] {target['name']}: 页面未检测到商品特征词({verify})。页面摘要: {sample}")
             return None
+
         # 2. 检查是否有明确的缺货/售罄标记
-        if re.search(target["oos_pattern"], text):
+        is_oos = bool(re.search(target["oos_pattern"], text))
+
+        # 3. 双正向断言（第二道防线：彻底消除反向匹配误报陷阱）
+        # 页面不仅要“未见缺货标”，还必须“正向明确检测到可订购动作”才判定为有货；若二者皆无，说明是软报错/维护页/残损DOM，安全跳过！
+        in_stock_pat = target.get("in_stock_pattern")
+        if in_stock_pat:
+            is_in_stock = bool(re.search(in_stock_pat, text, re.I))
+            if is_oos:
+                return 0
+            if is_in_stock:
+                return 1
+            sample = text[:120].strip()
+            log(f"[warn] {target['name']}: 既无缺货标亦无指定在售标({in_stock_pat})，判定DOM不完整跳过。摘要: {sample}")
+            return None
+
+        generic_buy = target.get("available_pattern", r"(?:立即订购|立即购买|Order Now|Add to Cart|Select\b|订购)")
+        if is_oos:
             return 0
-        return 1
+        if re.search(generic_buy, text, re.I):
+            return 1
+
+        sample = text[:120].strip()
+        log(f"[warn] {target['name']}: 虽未见缺货标，但亦未检测到任何订购按钮，疑似维护页或软报错，安全跳过。摘要: {sample}")
+        return None
 
     if mode == "category":
         pattern = target.get("available_pattern", r"(?:立即订购|立即购买|Order Now|Add to Cart|Select\b|订购)")
@@ -384,35 +406,53 @@ def save_and_commit_state(state):
     repo = os.environ.get("GITHUB_REPOSITORY", "")
     if not (token and repo):
         return
-    try:
-        remote = f"https://x-access-token:{token}@github.com/{repo}.git"
-        # 确保无残留冲突状态
-        subprocess.run(("git", "rebase", "--abort"), capture_output=True)
-        subprocess.run(("git", "fetch", remote, "main"), capture_output=True)
-        # 将本地指针重置到远端最新 commit（保证本地基于最新的 main 分支，杜绝 non-fast-forward 拒绝推送）
-        subprocess.run(("git", "reset", "--mixed", "FETCH_HEAD"), capture_output=True)
-        try:
-            with open(path, "r", encoding="utf-8") as rf:
-                merged = json.load(rf)
-        except Exception:
-            merged = {}
-        merged.update(state)
-        with open(path, "w", encoding="utf-8") as wf:
-            json.dump(merged, wf, ensure_ascii=False, indent=1)
 
-        subprocess.run(("git", "add", "state.json"), capture_output=True)
-        c = subprocess.run(("git", "-c", "user.name=stock-bot", "-c",
-                            "user.email=actions@users.noreply.github.com",
-                            "commit", "-m", "stock state update"),
-                           capture_output=True, text=True)
-        if c.returncode == 0:
+    remote = f"https://x-access-token:{token}@github.com/{repo}.git"
+
+    # 多工作流并发防竞态重试循环（最多重试 3 次，指数退避）
+    for attempt in range(1, 4):
+        try:
+            # 1. 强行终止任何可能残留的中间合并/变基状态
+            subprocess.run(("git", "rebase", "--abort"), capture_output=True)
+            subprocess.run(("git", "merge", "--abort"), capture_output=True)
+
+            # 2. 拉取远端最新提交并重置本地 HEAD
+            fetch_res = subprocess.run(("git", "fetch", remote, "main"), capture_output=True)
+            if fetch_res.returncode != 0:
+                time.sleep(attempt * 1.5)
+                continue
+            subprocess.run(("git", "reset", "--mixed", "FETCH_HEAD"), capture_output=True)
+
+            # 3. 与远端 state.json 智能合并（双向合并，绝不丢失任何并发工作流写回的状态）
+            try:
+                with open(path, "r", encoding="utf-8") as rf:
+                    merged = json.load(rf)
+            except Exception:
+                merged = {}
+            merged.update(state)
+            with open(path, "w", encoding="utf-8") as wf:
+                json.dump(merged, wf, ensure_ascii=False, indent=1)
+
+            subprocess.run(("git", "add", "state.json"), capture_output=True)
+            c = subprocess.run(("git", "-c", "user.name=stock-bot", "-c",
+                                "user.email=actions@users.noreply.github.com",
+                                "commit", "-m", "stock state update"),
+                               capture_output=True, text=True)
+            # 若无变更（并发工作流已先一步推入了相同状态），直接返回无需推送
+            if c.returncode != 0 and "nothing to commit" in (c.stdout + c.stderr):
+                log(f"[state] 远端状态已由并发工作流同步至最新，无需重复提交")
+                return
+
             p = subprocess.run(("git", "push", remote, "HEAD:main"), capture_output=True, text=True)
             if p.returncode == 0:
-                log("[state] 状态已成功同步至 GitHub 仓库")
+                log(f"[state] 状态已成功同步至 GitHub 仓库 (第 {attempt} 次提交)")
+                return
             else:
-                log("[state] 推送失败:", p.stderr.strip()[:100] or p.stdout.strip()[:100])
-    except Exception as e:
-        log("[state] 提交异常:", repr(e))
+                log(f"[state] 遭遇远程提交竞争，准备重试 (第 {attempt} 次): {p.stderr.strip()[:80]}")
+                time.sleep(attempt * 1.5)
+        except Exception as e:
+            log(f"[state] 提交异常 (第 {attempt} 次):", repr(e))
+            time.sleep(attempt * 1.5)
 
 
 def dispatch_next_watch():
