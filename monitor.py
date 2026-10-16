@@ -106,14 +106,20 @@ def fetch_html(target):
 
 
 def compute_stock(target, text=None):
-    """返回库存数。count 模式取页面数字；badge 模式 0=缺货 1=有货；json 模式读接口字段。"""
+    """返回库存：count 模式读页面数字；badge 模式 0=缺货 1=有货；category 模式统计分类页可订购数；json 模式读接口字段。"""
     mode = target.get("stock", "count")
     if mode == "badge":
         return 0 if re.search(target["oos_pattern"], text) else 1
+    if mode == "category":
+        pattern = target.get("available_pattern", r"(?:立即订购|立即购买|Order Now|Add to Cart|Select|订购)")
+        matches = re.findall(pattern, text, re.I)
+        return len(matches)
     if mode == "json":
         return compute_stock_json(target)
-    m = re.search(target["pattern"], text)
-    return int(m.group(1)) if m else None
+    if "pattern" in target and target["pattern"]:
+        m = re.search(target["pattern"], text)
+        return int(m.group(1)) if m else None
+    return 1
 
 
 # ---- panstar.ai JSON 接口（响应 AES-256-GCM 加密，密钥来自其前端 JS）----
