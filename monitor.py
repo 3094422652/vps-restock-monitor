@@ -581,10 +581,18 @@ def load_state():
         return {}
 
 
-def save_and_commit_state(state):
+def save_and_commit_state(state, oos_streak=None, last_notified=None):
     path = os.path.join(BASE_DIR, "state.json")
+    save_data = {k: v for k, v in state.items() if k != "_meta"}
+    clean_streak = {k: v for k, v in (oos_streak or {}).items() if v > 0}
+    clean_cooldown = {k: int(v) for k, v in (last_notified or {}).items() if time.time() - v < 3600}
+    if clean_streak or clean_cooldown:
+        save_data["_meta"] = {
+            "oos_streak": clean_streak,
+            "last_notified": clean_cooldown
+        }
     with open(path, "w", encoding="utf-8") as f:
-        json.dump(state, f, ensure_ascii=False, indent=1)
+        json.dump(save_data, f, ensure_ascii=False, indent=1)
     if not ALLOW_STATE_COMMIT:
         return
     token = os.environ.get("GITHUB_TOKEN", "") or os.environ.get("CHAIN_PAT", "")
@@ -614,7 +622,7 @@ def save_and_commit_state(state):
                     merged = json.load(rf)
             except Exception:
                 merged = {}
-            merged.update(state)
+            merged.update(save_data)
             with open(path, "w", encoding="utf-8") as wf:
                 json.dump(merged, wf, ensure_ascii=False, indent=1)
 
@@ -709,9 +717,11 @@ def main():
         log("[peer] 已有同伴窗口在岗，本班自动下岗（排班冗余）")
         return
     targets = load_targets()
-    prev = {t["name"]: load_state().get(t["name"]) for t in targets}
-    oos_streak = {}     # 记录连续检测为缺货的次数（必须连续 2 轮确认才将有货状态降为 0）
-    last_notified = {}  # 记录单品上次推送时间，同一目标设定 30 分钟防抖冷却
+    raw_state = load_state()
+    meta = raw_state.get("_meta", {}) if isinstance(raw_state, dict) else {}
+    oos_streak = meta.get("oos_streak", {})
+    last_notified = meta.get("last_notified", {})
+    prev = {t["name"]: raw_state.get(t["name"]) for t in targets}
     if not once:
         notify("🟢 补货监控已启动", "盯住:\n" + "\n".join(
             f"· {t['name']}" for t in targets), weixin=False)
@@ -762,9 +772,14 @@ def main():
                 oos_streak[t["name"]] = streak
                 if streak < 2:
                     log(f"[jitter] {t['name']}: 偶发检测到缺货 (第 1 次)，等待下一轮复核确认，暂不降级")
+                    dirty = True
                     continue
+                else:
+                    oos_streak[t["name"]] = 0
             else:
-                oos_streak[t["name"]] = 0
+                if oos_streak.get(t["name"], 0) > 0:
+                    oos_streak[t["name"]] = 0
+                    dirty = True
 
             if old is None:
                 log(f"[init] {t['name']}: {n}")
@@ -789,6 +804,7 @@ def main():
                     last_t = last_notified.get(t["name"], 0)
                     if now - last_t >= NOTIFY_COOLDOWN:
                         last_notified[t["name"]] = now
+                        dirty = True
                         detail = t.pop("_detail", "")
                         bj_time = bj_now_str()
                         buy_link = t.get("buy_url", t.get("url", ""))
@@ -818,7 +834,7 @@ def main():
             log(f"[check] {t['name']}: {n}")
 
         if dirty:
-            save_and_commit_state(prev)
+            save_and_commit_state(prev, oos_streak=oos_streak, last_notified=last_notified)
         if once:
             break
         if time.time() - last_beat >= HEARTBEAT_HOURS * 3600:
