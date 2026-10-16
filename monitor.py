@@ -65,10 +65,31 @@ def log(*a):
 def http_get(url, timeout=25):
     req = urllib.request.Request(url, headers={
         "User-Agent": UA,
+        "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8",
         "Accept-Language": "zh-CN,zh;q=0.9,en;q=0.8",
+        "Accept-Encoding": "gzip, deflate",
+        "Sec-Ch-Ua": "\"Not/A)Brand\";v=\"8\", \"Chromium\";v=\"126\", \"Google Chrome\";v=\"126\"",
+        "Sec-Ch-Ua-Mobile": "?0",
+        "Sec-Ch-Ua-Platform": "\"Windows\"",
+        "Sec-Fetch-Dest": "document",
+        "Sec-Fetch-Mode": "navigate",
+        "Sec-Fetch-Site": "none",
+        "Sec-Fetch-User": "?1",
+        "Upgrade-Insecure-Requests": "1",
     })
     with urllib.request.urlopen(req, timeout=timeout) as r:
-        return r.read().decode("utf-8", "replace")
+        raw = r.read()
+        enc = r.headers.get("Content-Encoding", "").lower()
+        if enc == "gzip" or raw[:2] == b"\x1f\x8b":
+            import gzip
+            raw = gzip.decompress(raw)
+        elif enc == "deflate":
+            import zlib
+            try:
+                raw = zlib.decompress(raw)
+            except Exception:
+                raw = zlib.decompress(raw, -zlib.MAX_WBITS)
+        return raw.decode("utf-8", "replace")
 
 
 def cf_worker_get(url, timeout=25):
@@ -96,28 +117,34 @@ def flare_get(url):
     global _flare_ready
     if not FLARESOLVERR_URL:
         raise RuntimeError("页面被 Cloudflare 拦截，且未配置 FLARESOLVERR_URL")
-    if not _flare_ready:
+
+    for attempt in range(2):
         try:
-            _flare_post({"cmd": "sessions.create", "session": FLARE_SESSION})
-        except Exception:
-            pass
-        _flare_ready = True
-    data = _flare_post({"cmd": "request.get", "url": url,
-                        "session": FLARE_SESSION, "maxTimeout": 60000})
-    if data.get("status") != "ok":
+            if not _flare_ready:
+                try:
+                    _flare_post({"cmd": "sessions.create", "session": FLARE_SESSION})
+                except Exception:
+                    pass
+                _flare_ready = True
+            data = _flare_post({"cmd": "request.get", "url": url,
+                                "session": FLARE_SESSION, "maxTimeout": 45000})
+            if data.get("status") == "ok":
+                return data["solution"]["response"]
+            log(f"[flare] 质询未通过({str(data.get('message'))[:60]})，重建会话重试...")
+        except Exception as e:
+            if attempt == 1:
+                raise
+            log(f"[flare] 请求异常({e})，重建会话重试...")
+
+        # 销毁污染会话并重置状态后重试
         try:
             _flare_post({"cmd": "sessions.destroy", "session": FLARE_SESSION})
         except Exception:
             pass
-        try:
-            _flare_post({"cmd": "sessions.create", "session": FLARE_SESSION})
-        except Exception:
-            pass
-        data = _flare_post({"cmd": "request.get", "url": url,
-                            "session": FLARE_SESSION, "maxTimeout": 60000})
-        if data.get("status") != "ok":
-            raise RuntimeError(f"FlareSolverr: {str(data.get('message'))[:120]}")
-    return data["solution"]["response"]
+        _flare_ready = False
+        time.sleep(1)
+
+    raise RuntimeError("FlareSolverr 质询超时或失败")
 
 
 def fetch_html(target):
@@ -225,7 +252,7 @@ def compute_stock(target, text=None):
         return count
 
     if mode == "json":
-        return compute_stock_json(target)
+        return compute_stock_json(target, data=text if isinstance(text, dict) else None)
 
     if "pattern" in target and target["pattern"]:
         m = re.search(target["pattern"], text)
@@ -296,8 +323,9 @@ def _json_find(data, spec):
     return cur
 
 
-def compute_stock_json(target):
-    data = fetch_json(target)
+def compute_stock_json(target, data=None):
+    if data is None:
+        data = fetch_json(target)
     spec = target.get("json_find_plans")
     plans = _json_find(data, spec) if spec else _plans_list(data)
     plans = _sellable(plans)
@@ -347,21 +375,43 @@ def stock_text(target, n):
     return f"{n} 台"
 
 
-def tg_send(text):
+def tg_send(text, html=True):
     if not (TG_TOKEN and TG_CHAT):
         log("[tg] 未配置 TG_TOKEN/TG_CHAT，本应发送:", text.replace("\n", " | "))
         return
-    data = urllib.parse.urlencode({
+    payload = {
         "chat_id": TG_CHAT,
         "text": text,
         "disable_web_page_preview": "false",
-    }).encode()
+    }
+    if html:
+        payload["parse_mode"] = "HTML"
+
+    data = urllib.parse.urlencode(payload).encode()
     req = urllib.request.Request(
         f"https://api.telegram.org/bot{TG_TOKEN}/sendMessage", data=data)
     try:
         with urllib.request.urlopen(req, timeout=20) as r:
             r.read()
         log("[tg] 已发送")
+    except urllib.error.HTTPError as e:
+        if html and e.code == 400:
+            try:
+                clean_text = re.sub(r"<[^>]+>", "", text)
+                data = urllib.parse.urlencode({
+                    "chat_id": TG_CHAT,
+                    "text": clean_text,
+                    "disable_web_page_preview": "false",
+                }).encode()
+                req2 = urllib.request.Request(
+                    f"https://api.telegram.org/bot{TG_TOKEN}/sendMessage", data=data)
+                with urllib.request.urlopen(req2, timeout=20) as r:
+                    r.read()
+                log("[tg] HTML格式降级纯文本已发送")
+                return
+            except Exception:
+                pass
+        log("[tg] 发送失败:", repr(e))
     except Exception as e:
         log("[tg] 发送失败:", repr(e))
 
@@ -396,34 +446,46 @@ def weixin_send(title, body):
     else:
         full_body = title
 
-    try:
-        # PushPlus 官方限制：title 上限 100 字符，content 上限 20,000 字符 (POST JSON)
-        pp_title = title if len(title) <= 100 else (title[:99] + "…")
-        pp_content = full_body
-        if len(pp_content) > 20000:
-            pp_content = pp_content[:19900] + "\n\n*(内容过长已截断)*"
+    pp_title = title if len(title) <= 100 else (title[:99] + "…")
+    pp_content = full_body
+    if len(pp_content) > 20000:
+        pp_content = pp_content[:19900] + "\n\n*(内容过长已截断)*"
 
-        payload = json.dumps({"token": PUSHPLUS_TOKEN, "title": pp_title,
-                              "content": pp_content, "template": "markdown"}).encode()
-        req = urllib.request.Request("https://www.pushplus.plus/send",
-                                     data=payload,
-                                     headers={"Content-Type": "application/json"})
-        with urllib.request.urlopen(req, timeout=20) as r:
-            res = json.load(r)
-        if res.get("code") == 200:
-            log("[wechat/PushPlus] 已发送")
-            return True
-        else:
-            log("[wechat/PushPlus] 失败:", str(res)[:150])
-    except Exception as e:
-        log("[wechat/PushPlus] 发送失败:", repr(e))
+    payload = json.dumps({"token": PUSHPLUS_TOKEN, "title": pp_title,
+                          "content": pp_content, "template": "markdown"}).encode()
+
+    for attempt in range(2):
+        try:
+            req = urllib.request.Request("https://www.pushplus.plus/send",
+                                         data=payload,
+                                         headers={"Content-Type": "application/json"})
+            with urllib.request.urlopen(req, timeout=20) as r:
+                res = json.load(r)
+            if res.get("code") == 200:
+                log("[wechat/PushPlus] 已发送")
+                return True
+            else:
+                log("[wechat/PushPlus] 失败:", str(res)[:150])
+                break
+        except Exception as e:
+            if attempt == 0:
+                time.sleep(1)
+                continue
+            log("[wechat/PushPlus] 发送失败:", repr(e))
     return False
 
 
 def notify(title, body, weixin=True):
     """多渠道通知：Telegram + 微信 (PushPlus)。心跳类消息可指定 weixin=False 省额度。"""
     clean_body = clean_body_title(title, body)
-    tg_send(f"{title}\n\n{clean_body}" if clean_body else title)
+
+    # Telegram 采用富文本 HTML 格式渲染链接与重点加粗
+    tg_body = clean_body
+    tg_body = re.sub(r"\[([^\]]+)\]\((https?://[^\)]+)\)", r'<a href="\2">\1</a>', tg_body)
+    tg_body = re.sub(r"\*\*([^*]+)\*\*", r"<b>\1</b>", tg_body)
+    tg_text = f"<b>{title}</b>\n\n{tg_body}" if tg_body else f"<b>{title}</b>"
+    tg_send(tg_text, html=True)
+
     if weixin:
         weixin_send(title, clean_body)
 
@@ -580,17 +642,28 @@ def main():
     while True:
         cycle_start = time.time()
         cache = {}
+        json_cache = {}
+        failed_keys = set()
         dirty = False
         for t in targets:
             try:
                 if t.get("stock") == "json":
-                    n = compute_stock(t)
+                    j_key = t.get("json_url") or t["url"]
+                    if j_key in failed_keys:
+                        continue
+                    if j_key not in json_cache:
+                        json_cache[j_key] = fetch_json(t)
+                    n = compute_stock(t, json_cache[j_key])
                 else:
                     key = t["url"]
+                    if key in failed_keys:
+                        continue
                     if key not in cache:
                         cache[key] = visible_text(fetch_html(t))
                     n = compute_stock(t, cache[key])
             except Exception as e:
+                err_key = (t.get("json_url") or t["url"]) if t.get("stock") == "json" else t["url"]
+                failed_keys.add(err_key)
                 log(f"[net] {t['name']}: {e!r}")
                 continue
             if n is None:

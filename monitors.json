@@ -25,6 +25,7 @@
     "stock": "badge",
     "verify_pattern": "L1-2C1G",
     "oos_pattern": "L1-2C1G[\\s\\S]{0,150}?(?:缺货|已售罄|无货|Out of Stock)",
+    "in_stock_pattern": "L1-2C1G[\\s\\S]{0,150}?(?:立即订购|Order Now|立即购买)",
     "buy_url": "https://digitalvirt.com/store/la-vps",
     "notify_above": 0,
     "fetch": "direct"
@@ -64,6 +65,7 @@
     "stock": "badge",
     "verify_pattern": "US\\.LA\\.9929\\.Core|Core",
     "oos_pattern": "US\\.LA\\.9929\\.Core[\\s\\S]{0,200}?(?:0\\s*(?:Available|台)|Out of Stock|缺货|售罄|无)",
+    "in_stock_pattern": "US\\.LA\\.9929\\.Core[\\s\\S]{0,200}?(?:Order Now|立即订购|加入购物车)",
     "buy_url": "https://app.vmiss.com/store/us-los-angeles-9929",
     "notify_above": 0,
     "fetch": "flare"
@@ -115,6 +117,7 @@
     "stock": "badge",
     "verify_pattern": "LAX\\.EB\\.WEE|AN4\\.EB\\.WEE|Eyeball.*WEE|WEE",
     "oos_pattern": "(?:LAX\\.EB\\.WEE|AN4\\.EB\\.WEE)[\\s\\S]{0,300}?(?:none-stock|Out of Stock|缺货|Sold Out)",
+    "in_stock_pattern": "(?:LAX\\.EB\\.WEE|AN4\\.EB\\.WEE)[\\s\\S]{0,300}?(?:Order Now|立即订购)",
     "buy_url": "https://www.dmit.io/cart.php",
     "notify_above": 0,
     "fetch": "flare"
@@ -141,6 +144,28 @@
     "fetch": "direct"
   },
   {
+    "name": "【单品精选】AcckCloud - 洛杉矶 9929 MINI (¥19.99/月)",
+    "url": "https://acckcloud.com/api/sales-catalog",
+    "stock": "json",
+    "json_url": "https://acckcloud.com/api/sales-catalog",
+    "json_find_plans": {
+      "steps": [
+        {
+          "path": "plans",
+          "filter": {
+            "id": 16
+          }
+        }
+      ]
+    },
+    "json_stock_field": "stock",
+    "json_pick": "plan_id",
+    "plan_id": 16,
+    "buy_url": "https://acckcloud.com/store/server",
+    "notify_above": 0,
+    "fetch": "direct"
+  },
+  {
     "name": "【全分类】Saltyfish 咸鱼云 - 圣何塞 9929 (Elite) 全线",
     "url": "https://portal.saltyfish.io/store/san-jose-kvm-vps-elite-network",
     "stock": "category",
@@ -156,6 +181,7 @@
     "stock": "badge",
     "verify_pattern": "sjc[.\\s-]*e[0-9]?[.\\s-]*mini|mini",
     "oos_pattern": "(?:sjc[.\\s-]*e[0-9]?[.\\s-]*mini|mini)[\\s\\S]{0,250}?(?:0\\s*Available|Out of Stock|缺货|售罄|无货)",
+    "in_stock_pattern": "(?:sjc[.\\s-]*e[0-9]?[.\\s-]*mini|mini)[\\s\\S]{0,250}?(?:Order Now|立即订购|Add to Cart)",
     "buy_url": "https://portal.saltyfish.io/store/san-jose-kvm-vps-elite-network",
     "notify_above": 0,
     "fetch": "flare"
@@ -176,6 +202,7 @@
     "stock": "badge",
     "verify_pattern": "Starter",
     "oos_pattern": "Starter[\\s\\S]{0,200}?(?:Out of Stock|0 Available|Sold Out|缺货)",
+    "in_stock_pattern": "Starter[\\s\\S]{0,200}?(?:Order Now|Order|Select|立即订购)",
     "buy_url": "https://vps.hosting/cart/san-jose-cloud-kvm-vps/",
     "notify_above": 0,
     "fetch": "flare"
