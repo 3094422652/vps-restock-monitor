@@ -80,23 +80,24 @@
   },
   {
     "name": "【全分类】ZgoCloud - 洛杉矶 9929&CMIN2 全线",
-    "url": "https://clients.zgovps.com/index.php?rp=/store/los-angeles-amd-vps",
+    "url": "https://clients.zgovps.com/index.php?/cart/los-angeles-amd-optimised-vps/",
     "stock": "category",
-    "available_pattern": "(?:Order Now|立即订购|Add to Cart)",
+    "available_pattern": "(?:Order Now|立即订购|Add to Cart|Continue)",
     "category_oos_pattern": "(?:Out of Stock|缺货|0\\s*Available|Sold Out|Unavailable)",
-    "buy_url": "https://clients.zgovps.com/index.php?rp=/store/los-angeles-amd-vps",
+    "buy_url": "https://clients.zgovps.com/index.php?/cart/los-angeles-amd-optimised-vps/",
     "notify_above": 0,
-    "fetch": "flare"
+    "fetch": "cf_worker"
   },
   {
     "name": "【单品精选】ZgoCloud - 洛杉矶 9929 Starter",
-    "url": "https://clients.zgovps.com/index.php?rp=/store/los-angeles-amd-vps",
+    "url": "https://clients.zgovps.com/index.php?/cart/los-angeles-amd-optimised-vps/",
     "stock": "badge",
     "verify_pattern": "Starter",
-    "oos_pattern": "(?:9929.*Starter|CMIN2.*Starter)[\\s\\S]{0,250}?(?:Out of Stock|缺货|0 Available|Sold Out)",
-    "buy_url": "https://clients.zgovps.com/index.php?rp=/store/los-angeles-amd-vps",
+    "oos_pattern": "Starter[\\s\\S]{0,250}?Out of stock",
+    "in_stock_pattern": "Starter[\\s\\S]{0,250}?(?:Continue|Order Now|Add to Cart)",
+    "buy_url": "https://clients.zgovps.com/index.php?/cart/los-angeles-amd-optimised-vps/",
     "notify_above": 0,
-    "fetch": "flare"
+    "fetch": "cf_worker"
   },
   {
     "name": "【全分类】DMIT - 洛杉矶 Eyeball (9929/CMIN2) 全线",

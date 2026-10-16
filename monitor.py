@@ -50,6 +50,7 @@ SERVERCHAN_KEY = os.environ.get("SERVERCHAN_KEY", "")   # Server酱 SendKey（�
 PUSHPLUS_TOKEN = os.environ.get("PUSHPLUS_TOKEN", "")   # PushPlus token（微信推送，备用渠道）
 WEIXIN_HEARTBEAT = os.environ.get("WEIXIN_HEARTBEAT") == "1"  # 微信渠道是否也发心跳（默认只发补货警报）
 FLARESOLVERR_URL = os.environ.get("FLARESOLVERR_URL", "")
+CF_WORKER_URL = os.environ.get("CF_WORKER_URL", "").rstrip("/")
 ALLOW_STATE_COMMIT = os.environ.get("ALLOW_STATE_COMMIT") == "1"
 UA = ("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
       "(KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36")
@@ -69,6 +70,13 @@ def http_get(url, timeout=25):
     })
     with urllib.request.urlopen(req, timeout=timeout) as r:
         return r.read().decode("utf-8", "replace")
+
+
+def cf_worker_get(url, timeout=25):
+    if not CF_WORKER_URL:
+        raise RuntimeError("未配置 CF_WORKER_URL")
+    proxy_url = f"{CF_WORKER_URL}?url={urllib.parse.quote(url)}"
+    return http_get(proxy_url, timeout=timeout)
 
 
 def visible_text(html):
@@ -115,18 +123,49 @@ def flare_get(url):
 
 def fetch_html(target):
     mode = target.get("fetch", "auto")
+    url = target["url"]
+
+    if mode == "cf_worker":
+        try:
+            return cf_worker_get(url)
+        except Exception as e:
+            log(f"[cf_worker] {url} Worker代理失败({e})，尝试 FlareSolverr/直连备用")
+            if FLARESOLVERR_URL:
+                return flare_get(url)
+            raise
+
     if mode == "flare":
-        return flare_get(target["url"])
+        try:
+            return flare_get(url)
+        except Exception as e:
+            if CF_WORKER_URL:
+                log(f"[flare] {url} FlareSolverr失败({e})，尝试 CF Worker 备用")
+                try:
+                    return cf_worker_get(url)
+                except Exception:
+                    pass
+            raise
+
     try:
-        html = http_get(target["url"])
+        html = http_get(url)
         low = html.lower()
         if "just a moment" in low or "cf-chl" in low or "cf-challenge" in low:
             raise RuntimeError("cloudflare challenge")
         return html
     except (urllib.error.HTTPError, RuntimeError) as e:
-        if mode == "auto" and FLARESOLVERR_URL:
-            log(f"[flare] {target['url']} 直连失败({e})，改走 FlareSolverr")
-            return flare_get(target["url"])
+        if mode == "auto":
+            if CF_WORKER_URL:
+                log(f"[auto] {url} 直连被拦截({e})，尝试 CF Worker")
+                try:
+                    res = cf_worker_get(url)
+                    low = res.lower()
+                    if "just a moment" not in low and "cf-chl" not in low and "cf-challenge" not in low:
+                        return res
+                except Exception:
+                    pass
+            if FLARESOLVERR_URL:
+                log(f"[auto] {url} 改走 FlareSolverr")
+                return flare_get(url)
         raise
 
 
@@ -163,7 +202,7 @@ def compute_stock(target, text=None):
             log(f"[warn] {target['name']}: 既无缺货标亦无指定在售标({in_stock_pat})，判定DOM不完整跳过。摘要: {sample}")
             return None
 
-        generic_buy = target.get("available_pattern", r"(?:立即订购|立即购买|Order Now|Add to Cart|Select\b|订购)")
+        generic_buy = target.get("available_pattern", r"(?:立即订购|立即购买|Order Now|Add to Cart|Select\b|订购|Continue)")
         if is_oos:
             return 0
         if re.search(generic_buy, text, re.I):
@@ -174,7 +213,7 @@ def compute_stock(target, text=None):
         return None
 
     if mode == "category":
-        pattern = target.get("available_pattern", r"(?:立即订购|立即购买|Order Now|Add to Cart|Select\b|订购)")
+        pattern = target.get("available_pattern", r"(?:立即订购|立即购买|Order Now|Add to Cart|Select\b|订购|Continue)")
         matches = re.findall(pattern, text, re.I)
         count = len(matches)
         if count == 0:
@@ -323,23 +362,24 @@ def tg_send(text):
 def weixin_send(title, body):
     """通过 PushPlus / Server酱 推微信。优先使用 PushPlus（每日200条），未配置时回退到 Server酱。"""
     sent = False
+    if body:
+        if body.startswith("http://") or body.startswith("https://"):
+            full_body = f"### {title}\n\n🛒 **购买直链**：[{body}]({body})"
+        else:
+            full_body = f"### {title}\n\n{body}"
+    else:
+        full_body = title
+
     if PUSHPLUS_TOKEN:
         try:
             # PushPlus 官方限制：title 上限 100 字符，content 上限 20,000 字符 (POST JSON)
             pp_title = title if len(title) <= 100 else (title[:99] + "…")
-            if body:
-                if body.startswith("http://") or body.startswith("https://"):
-                    full_body = f"### {title}\n\n🛒 **购买直链**：[{body}]({body})"
-                else:
-                    full_body = f"### {title}\n\n{body}"
-            else:
-                full_body = title
-
-            if len(full_body) > 20000:
-                full_body = full_body[:19900] + "\n\n*(内容过长已截断)*"
+            pp_content = full_body
+            if len(pp_content) > 20000:
+                pp_content = pp_content[:19900] + "\n\n*(内容过长已截断)*"
 
             payload = json.dumps({"token": PUSHPLUS_TOKEN, "title": pp_title,
-                                  "content": full_body, "template": "markdown"}).encode()
+                                  "content": pp_content, "template": "markdown"}).encode()
             req = urllib.request.Request("https://www.pushplus.plus/send",
                                          data=payload,
                                          headers={"Content-Type": "application/json"})

@@ -36,6 +36,7 @@ jobs:
           CHAIN_PAT: ${{ secrets.CHAIN_PAT }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           FLARESOLVERR_URL: http://localhost:8191
+          CF_WORKER_URL: ${{ secrets.CF_WORKER_URL }}
           ALLOW_STATE_COMMIT: "1"
           MAX_MINUTES: "244"
           CHECK_INTERVAL: "25"
