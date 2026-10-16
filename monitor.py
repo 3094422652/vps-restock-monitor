@@ -7,7 +7,10 @@
   时间预算用完干净退出，由下一个调度窗口无缝接力；
 - state.json 记录各目标上次库存，跨进程/跨 job 去重，只在状态变化时提交回仓库；
 - 被 Cloudflare 拦截的站点通过 FlareSolverr（无头浏览器服务）抓取；
-- 内置防抖冷却机制（NOTIFY_COOLDOWN），避免单品抖动或页面偶发重定向产生重复推送。
+- 双向防抖系统：
+  1) verify_pattern 机制：正向核实商品信息是否存在，杜绝骨架屏/404/挑战页误判为有货；
+  2) 售罄迟滞确认 (Hysteresis)：连续 2 轮确认缺货才变更状态，彻底消除单轮页面抖动；
+  3) 推送冷却窗口 (NOTIFY_COOLDOWN)：同一单品 30 分钟内绝不重复警报，杜绝消息轰炸。
 """
 import base64
 import json
@@ -29,7 +32,7 @@ except ImportError:
 CHECK_INTERVAL = int(os.environ.get("CHECK_INTERVAL", "40"))      # 每轮检查间隔（秒）
 MAX_MINUTES = float(os.environ.get("MAX_MINUTES", "349"))         # 本进程最长运行分钟数
 HEARTBEAT_HOURS = float(os.environ.get("HEARTBEAT_HOURS", "6"))   # 心跳消息间隔（小时）
-NOTIFY_COOLDOWN = int(os.environ.get("NOTIFY_COOLDOWN", "1800"))  # 30分钟防抖冷却（同单品不重复轰炸）
+NOTIFY_COOLDOWN = int(os.environ.get("NOTIFY_COOLDOWN", "1800"))  # 30分钟防抖冷却（同单品不重复推送）
 TG_TOKEN = os.environ.get("TG_TOKEN", "")
 TG_CHAT = os.environ.get("TG_CHAT", "")
 SERVERCHAN_KEY = os.environ.get("SERVERCHAN_KEY", "")   # Server酱 SendKey（微信推送，备用渠道）
@@ -108,19 +111,44 @@ def fetch_html(target):
 
 
 def compute_stock(target, text=None):
-    """返回库存：count 模式读页面数字；badge 模式 0=缺货 1=有货；category 模式统计分类页可订购数；json 模式读接口字段。"""
+    """返回库存：
+    - count 模式：通过正则提取数字，提取不到返回 None；
+    - badge 模式：先验证商品特征词 (verify_pattern)，未验证通过说明页面不完整返回 None；验证通过后根据 oos_pattern 判定 0/1；
+    - category 模式：统计可订购匹配数。若为 0 且页面未出现任何缺货/售罄特征，说明渲染未就绪返回 None；
+    - json 模式：读接口字段。
+    """
     mode = target.get("stock", "count")
+
     if mode == "badge":
-        return 0 if re.search(target["oos_pattern"], text) else 1
+        # 1. 验证页面是否完整加载了目标商品信息（防止骨架屏、404、502 或未解决的验证页误判为有货）
+        verify = target.get("verify_pattern")
+        if verify and not re.search(verify, text, re.I):
+            log(f"[warn] {target['name']}: 页面未检测到商品特征词({verify})，渲染未就绪或页面改版，跳过本轮")
+            return None
+        # 2. 检查是否有明确的缺货/售罄标记
+        if re.search(target["oos_pattern"], text):
+            return 0
+        return 1
+
     if mode == "category":
         pattern = target.get("available_pattern", r"(?:立即订购|立即购买|Order Now|Add to Cart|Select\b|订购)")
         matches = re.findall(pattern, text, re.I)
-        return len(matches)
+        count = len(matches)
+        if count == 0:
+            # 验证页面是否真的是“全部分类售罄”，还是页面没加载出来
+            oos_check = target.get("category_oos_pattern", r"(?:缺货|售罄|已售罄|无货|Out of Stock|Sold Out|0\s*(?:Available|台)|Unavailable)")
+            if not re.search(oos_check, text, re.I):
+                log(f"[warn] {target['name']}: 分类页未检测到任何商品或售罄标记，疑似渲染未就绪，跳过本轮")
+                return None
+        return count
+
     if mode == "json":
         return compute_stock_json(target)
+
     if "pattern" in target and target["pattern"]:
         m = re.search(target["pattern"], text)
         return int(m.group(1)) if m else None
+
     return 1
 
 
@@ -315,30 +343,35 @@ def save_and_commit_state(state):
         return
     token = os.environ.get("GITHUB_TOKEN", "") or os.environ.get("CHAIN_PAT", "")
     repo = os.environ.get("GITHUB_REPOSITORY", "")
+    if not (token and repo):
+        return
     try:
-        def git(*args):
-            return subprocess.run(("git",) + args, capture_output=True, text=True)
+        remote = f"https://x-access-token:{token}@github.com/{repo}.git"
+        # 确保无残留冲突状态
+        subprocess.run(("git", "rebase", "--abort"), capture_output=True)
+        subprocess.run(("git", "fetch", remote, "main"), capture_output=True)
+        # 合并远端最新数据（避免覆盖其它字段）
+        try:
+            subprocess.run(("git", "checkout", "FETCH_HEAD", "--", "state.json"), capture_output=True)
+            with open(path, "r", encoding="utf-8") as rf:
+                merged = json.load(rf)
+        except Exception:
+            merged = {}
+        merged.update(state)
+        with open(path, "w", encoding="utf-8") as wf:
+            json.dump(merged, wf, ensure_ascii=False, indent=1)
 
-        git("add", os.path.relpath(path))
-        c = git("-c", "user.name=stock-bot", "-c",
-                "user.email=actions@users.noreply.github.com",
-                "commit", "-m", "stock state update")
-        if c.returncode != 0:
-            return  # 无变化或已提交
-
-        if token and repo:
-            remote = f"https://x-access-token:{token}@github.com/{repo}.git"
-            git("fetch", remote, "main")
-            git("rebase", "FETCH_HEAD")
-            r = git("push", remote, "HEAD:main")
-        else:
-            git("pull", "--rebase", "-q")
-            r = git("push", "-q", "origin", "HEAD")
-
-        if r.returncode == 0:
-            log("[state] 已成功提交并推送到 GitHub")
-        else:
-            log(f"[state] 推送失败: {r.stderr.strip() or r.stdout.strip()}")
+        subprocess.run(("git", "add", "state.json"), capture_output=True)
+        c = subprocess.run(("git", "-c", "user.name=stock-bot", "-c",
+                            "user.email=actions@users.noreply.github.com",
+                            "commit", "-m", "stock state update"),
+                           capture_output=True, text=True)
+        if c.returncode == 0:
+            p = subprocess.run(("git", "push", remote, "HEAD:main"), capture_output=True, text=True)
+            if p.returncode == 0:
+                log("[state] 状态已成功同步至 GitHub 仓库")
+            else:
+                log("[state] 推送失败:", p.stderr.strip()[:100] or p.stdout.strip()[:100])
     except Exception as e:
         log("[state] 提交异常:", repr(e))
 
@@ -401,7 +434,8 @@ def main():
         return
     targets = load_targets()
     prev = {t["name"]: load_state().get(t["name"]) for t in targets}
-    last_notified = {}  # 记录单品上次推送时间，防止频繁抖动导致重复推送
+    oos_streak = {}     # 记录连续检测为缺货的次数（必须连续 2 轮确认才将有货状态降为 0）
+    last_notified = {}  # 记录单品上次推送时间，同一目标设定 30 分钟防抖冷却
     if not once:
         notify("🟢 补货监控已启动", "盯住:\n" + "\n".join(
             f"· {t['name']}" for t in targets), weixin=False)
@@ -423,10 +457,21 @@ def main():
                 log(f"[net] {t['name']}: {e!r}")
                 continue
             if n is None:
-                log(f"[warn] {t['name']}: 未匹配到库存，页面可能改版")
                 continue
+
             old = prev[t["name"]]
             threshold = t.get("notify_above", 0)
+
+            # 缺货迟滞防抖：若之前是有货状态(old > threshold)，单次偶发 0 暂不降级，需连续 2 轮确认
+            if old is not None and old > threshold and n <= threshold:
+                streak = oos_streak.get(t["name"], 0) + 1
+                oos_streak[t["name"]] = streak
+                if streak < 2:
+                    log(f"[jitter] {t['name']}: 偶发检测到缺货 (第 1 次)，等待下一轮复核确认，暂不降级")
+                    continue
+            else:
+                oos_streak[t["name"]] = 0
+
             if old is None:
                 log(f"[init] {t['name']}: {n}")
             elif n > threshold >= old:
@@ -440,10 +485,12 @@ def main():
                            f"{extra}\n{t.get('buy_url', t.get('url', ''))}".strip())
                 else:
                     log(f"[cooldown] {t['name']}: 库存={n} (距上次通知仅 {int(now - last_t)}s，冷却防抖)")
+
             if old is None or n != old:
                 prev[t["name"]] = n
                 dirty = True
             log(f"[check] {t['name']}: {n}")
+
         if dirty:
             save_and_commit_state(prev)
         if once:

@@ -4,6 +4,7 @@
     "url": "https://digitalvirt.com/store/la-vps",
     "stock": "category",
     "available_pattern": "(?:立即订购|Order Now|立即购买)",
+    "category_oos_pattern": "(?:缺货|售罄|已售罄|Out of Stock)",
     "buy_url": "https://digitalvirt.com/store/la-vps",
     "notify_above": 0,
     "fetch": "direct"
@@ -13,6 +14,7 @@
     "url": "https://digitalvirt.com/store/lightvm-9929",
     "stock": "category",
     "available_pattern": "(?:立即订购|Order Now|立即购买)",
+    "category_oos_pattern": "(?:缺货|售罄|已售罄|Out of Stock)",
     "buy_url": "https://digitalvirt.com/store/lightvm-9929",
     "notify_above": 0,
     "fetch": "direct"
@@ -21,6 +23,7 @@
     "name": "【单品精选】DigitalVirt - 洛杉矶 9929 L1-2C1G (¥39/月)",
     "url": "https://digitalvirt.com/store/la-vps",
     "stock": "badge",
+    "verify_pattern": "L1-2C1G",
     "oos_pattern": "L1-2C1G[\\s\\S]{0,150}?(?:缺货|已售罄|无货|Out of Stock)",
     "buy_url": "https://digitalvirt.com/store/la-vps",
     "notify_above": 0,
@@ -31,6 +34,7 @@
     "url": "https://666clouds.com/shop",
     "stock": "category",
     "available_pattern": "9929[^\\n<]{0,100}?现货",
+    "category_oos_pattern": "(?:暂时缺货|缺货|售罄|0 Available)",
     "buy_url": "https://666clouds.com/shop",
     "notify_above": 0,
     "fetch": "direct"
@@ -49,6 +53,7 @@
     "url": "https://app.vmiss.com/store/us-los-angeles-9929",
     "stock": "category",
     "available_pattern": "(?:Order Now|立即订购|加入购物车)",
+    "category_oos_pattern": "(?:Out of Stock|缺货|0\\s*Available|售罄)",
     "buy_url": "https://app.vmiss.com/store/us-los-angeles-9929",
     "notify_above": 0,
     "fetch": "flare"
@@ -57,6 +62,7 @@
     "name": "【单品精选】VMISS - 洛杉矶 9929 Core",
     "url": "https://app.vmiss.com/store/us-los-angeles-9929",
     "stock": "badge",
+    "verify_pattern": "US\\.LA\\.9929\\.Core|Core",
     "oos_pattern": "US\\.LA\\.9929\\.Core[\\s\\S]{0,200}?(?:0\\s*(?:Available|台)|Out of Stock|缺货|售罄|无)",
     "buy_url": "https://app.vmiss.com/store/us-los-angeles-9929",
     "notify_above": 0,
@@ -67,6 +73,7 @@
     "url": "https://app.vmiss.com/store/us-los-angeles-tri",
     "stock": "category",
     "available_pattern": "(?:Order Now|立即订购|加入购物车)",
+    "category_oos_pattern": "(?:Out of Stock|缺货|0\\s*Available|售罄)",
     "buy_url": "https://app.vmiss.com/store/us-los-angeles-tri",
     "notify_above": 0,
     "fetch": "flare"
@@ -76,6 +83,7 @@
     "url": "https://clients.zgovps.com/index.php?rp=/store/los-angeles-amd-vps",
     "stock": "category",
     "available_pattern": "(?:Order Now|立即订购|Add to Cart)",
+    "category_oos_pattern": "(?:Out of Stock|缺货|0\\s*Available|Sold Out|Unavailable)",
     "buy_url": "https://clients.zgovps.com/index.php?rp=/store/los-angeles-amd-vps",
     "notify_above": 0,
     "fetch": "flare"
@@ -84,6 +92,7 @@
     "name": "【单品精选】ZgoCloud - 洛杉矶 9929 Starter",
     "url": "https://clients.zgovps.com/index.php?rp=/store/los-angeles-amd-vps",
     "stock": "badge",
+    "verify_pattern": "Starter",
     "oos_pattern": "(?:9929.*Starter|CMIN2.*Starter)[\\s\\S]{0,250}?(?:Out of Stock|缺货|0 Available|Sold Out)",
     "buy_url": "https://clients.zgovps.com/index.php?rp=/store/los-angeles-amd-vps",
     "notify_above": 0,
@@ -94,6 +103,7 @@
     "url": "https://www.dmit.io/cart.php",
     "stock": "category",
     "available_pattern": "(?:LAX\\.EB|Eyeball)[\\s\\S]{0,150}?(?:Order Now|立即订购)",
+    "category_oos_pattern": "(?:none-stock|Out of Stock|缺货|Sold Out)",
     "buy_url": "https://www.dmit.io/cart.php",
     "notify_above": 0,
     "fetch": "flare"
@@ -102,6 +112,7 @@
     "name": "【单品精选】DMIT - 洛杉矶 Eyeball WEE ($39.9/年)",
     "url": "https://www.dmit.io/cart.php",
     "stock": "badge",
+    "verify_pattern": "LAX\\.EB\\.WEE|AN4\\.EB\\.WEE|Eyeball.*WEE|WEE",
     "oos_pattern": "(?:LAX\\.EB\\.WEE|AN4\\.EB\\.WEE)[\\s\\S]{0,300}?(?:none-stock|Out of Stock|缺货|Sold Out)",
     "buy_url": "https://www.dmit.io/cart.php",
     "notify_above": 0,
@@ -112,6 +123,7 @@
     "url": "https://acckcloud.com/cart.php",
     "stock": "category",
     "available_pattern": "9929[\\s\\S]{0,100}?(?:立即订购|Order Now|立即购买)",
+    "category_oos_pattern": "(?:缺货|已售罄|Out of Stock|0 Available)",
     "buy_url": "https://acckcloud.com/cart.php",
     "notify_above": 0,
     "fetch": "flare"
@@ -121,6 +133,7 @@
     "url": "https://portal.saltyfish.io/store/san-jose-kvm-vps-elite-network",
     "stock": "category",
     "available_pattern": "(?:Order Now|立即订购|Add to Cart)",
+    "category_oos_pattern": "(?:Out of Stock|缺货|0\\s*Available|售罄)",
     "buy_url": "https://portal.saltyfish.io/store/san-jose-kvm-vps-elite-network",
     "notify_above": 0,
     "fetch": "flare"
@@ -129,6 +142,7 @@
     "name": "【单品精选】Saltyfish 咸鱼云 - 圣何塞 9929 mini款 (sjc.e1.mini)",
     "url": "https://portal.saltyfish.io/store/san-jose-kvm-vps-elite-network",
     "stock": "badge",
+    "verify_pattern": "sjc\\.e1\\.mini|sjc\\.e1",
     "oos_pattern": "(?:sjc\\.e1\\.mini|sjc\\.e1)[\\s\\S]{0,200}?(?:0\\s*Available|Out of Stock|缺货|售罄)",
     "buy_url": "https://portal.saltyfish.io/store/san-jose-kvm-vps-elite-network",
     "notify_above": 0,
@@ -139,6 +153,7 @@
     "url": "https://vps.hosting/cart/san-jose-cloud-kvm-vps/",
     "stock": "category",
     "available_pattern": "(?:Order Now|Order|Select|立即订购)",
+    "category_oos_pattern": "(?:Out of Stock|缺货|0\\s*Available|Sold Out)",
     "buy_url": "https://vps.hosting/cart/san-jose-cloud-kvm-vps/",
     "notify_above": 0,
     "fetch": "flare"
@@ -147,6 +162,7 @@
     "name": "【单品精选】V.PS - 圣何塞 9929 Starter特惠",
     "url": "https://vps.hosting/cart/san-jose-cloud-kvm-vps/",
     "stock": "badge",
+    "verify_pattern": "Starter",
     "oos_pattern": "Starter[\\s\\S]{0,200}?(?:Out of Stock|0 Available|Sold Out|缺货)",
     "buy_url": "https://vps.hosting/cart/san-jose-cloud-kvm-vps/",
     "notify_above": 0,
