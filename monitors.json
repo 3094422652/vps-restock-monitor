@@ -1,6 +1,60 @@
 [
   {
-    "name": "VMISS 洛杉矶 9929 Core",
+    "name": "【全分类】VMISS 美西洛杉矶 9929 分类页",
+    "url": "https://app.vmiss.com/store/us-los-angeles-9929",
+    "stock": "category",
+    "available_pattern": "(?:Order Now|立即订购|加入购物车)",
+    "buy_url": "https://app.vmiss.com/store/us-los-angeles-9929",
+    "notify_above": 0,
+    "fetch": "flare"
+  },
+  {
+    "name": "【全分类】DMIT 洛杉矶 Eyeball (9929/CMIN2) 分类页",
+    "url": "https://www.dmit.io/cart.php?gid=1",
+    "stock": "category",
+    "available_pattern": "(?:Order Now|立即订购|Add to Cart)",
+    "buy_url": "https://www.dmit.io/cart.php?gid=1",
+    "notify_above": 0,
+    "fetch": "flare"
+  },
+  {
+    "name": "【全分类】DigitalVirt 洛杉矶 9929 分类页",
+    "url": "https://digitalvirt.com/cart.php?gid=1",
+    "stock": "category",
+    "available_pattern": "(?:立即订购|Order Now|立即购买)",
+    "buy_url": "https://digitalvirt.com/cart.php?gid=1",
+    "notify_above": 0,
+    "fetch": "direct"
+  },
+  {
+    "name": "【全分类】六六云 美西 9929 优化分类页",
+    "url": "https://666clouds.com/cart.php?gid=1",
+    "stock": "category",
+    "available_pattern": "(?:立即订购|Order Now|立即购买)",
+    "buy_url": "https://666clouds.com/cart.php?gid=1",
+    "notify_above": 0,
+    "fetch": "direct"
+  },
+  {
+    "name": "【全分类】ZgoCloud 洛杉矶 9929&CMIN2 分类页",
+    "url": "https://clients.zgovps.com/index.php?rp=/store/los-angeles-amd-vps",
+    "stock": "category",
+    "available_pattern": "(?:Order Now|立即订购|Add to Cart)",
+    "buy_url": "https://clients.zgovps.com/index.php?rp=/store/los-angeles-amd-vps",
+    "notify_above": 0,
+    "fetch": "flare"
+  },
+  {
+    "name": "【全分类】AcckCloud 美国 NUS 9929 分类页",
+    "url": "https://acckcloud.com/cart.php?gid=1",
+    "stock": "category",
+    "available_pattern": "(?:立即订购|Order Now|立即购买)",
+    "buy_url": "https://acckcloud.com/cart.php?gid=1",
+    "notify_above": 0,
+    "fetch": "direct"
+  },
+  {
+    "name": "【单品精选】VMISS 洛杉矶 9929 Core",
     "url": "https://app.vmiss.com/store/us-los-angeles-9929",
     "stock": "badge",
     "oos_pattern": "US\\.LA\\.9929\\.Core[\\s\\S]{0,200}?(?:0\\s*(?:Available|台)|Out of Stock|缺货|售罄|无)",
@@ -9,7 +63,7 @@
     "fetch": "flare"
   },
   {
-    "name": "DMIT 洛杉矶 Eyeball WEE (LAX.EB.WEE)",
+    "name": "【单品精选】DMIT 洛杉矶 Eyeball WEE (LAX.EB.WEE)",
     "url": "https://www.dmit.io/cart.php",
     "stock": "badge",
     "oos_pattern": "(?:LAX\\.EB\\.WEE|AN4\\.EB\\.WEE)[\\s\\S]{0,300}?(?:none-stock|Out of Stock|缺货|Sold Out)",
@@ -18,7 +72,7 @@
     "fetch": "flare"
   },
   {
-    "name": "DigitalVirt 洛杉矶 9929 (L1)",
+    "name": "【单品精选】DigitalVirt 洛杉矶 9929 (L1)",
     "url": "https://digitalvirt.com/cart.php",
     "stock": "badge",
     "oos_pattern": "(?:洛杉矶.*9929|L1)[\\s\\S]{0,250}?(?:Out of Stock|缺货|缺貨|已售罄|无货)",
@@ -27,7 +81,7 @@
     "fetch": "direct"
   },
   {
-    "name": "六六云 美西 9929 特价年付",
+    "name": "【单品精选】六六云 美西 9929 特价年付",
     "url": "https://666clouds.com/cart.php",
     "stock": "badge",
     "oos_pattern": "(?:美西.*9929|9929.*特价)[\\s\\S]{0,250}?(?:Out of Stock|缺货|缺貨|0 Available)",
@@ -36,7 +90,7 @@
     "fetch": "direct"
   },
   {
-    "name": "ZgoCloud LA 9929&CMIN2 Starter",
+    "name": "【单品精选】ZgoCloud LA 9929&CMIN2 Starter",
     "url": "https://clients.zgovps.com/index.php?rp=/store/los-angeles-amd-vps",
     "stock": "badge",
     "oos_pattern": "(?:9929.*Starter|CMIN2.*Starter)[\\s\\S]{0,250}?(?:Out of Stock|缺货|0 Available|Sold Out)",
@@ -45,7 +99,7 @@
     "fetch": "flare"
   },
   {
-    "name": "AcckCloud 美国 NUS 9929 入门",
+    "name": "【单品精选】AcckCloud 美国 NUS 9929 入门",
     "url": "https://acckcloud.com/cart.php",
     "stock": "badge",
     "oos_pattern": "(?:NUS.*9929|美国.*9929)[\\s\\S]{0,250}?(?:Out of Stock|缺货|0 Available|无货)",
