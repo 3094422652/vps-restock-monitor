@@ -1,28 +1,28 @@
 [
   {
     "name": "【全分类】DigitalVirt - 洛杉矶 9929 旗舰全线",
-    "url": "https://digitalvirt.com/stores/la-vps",
+    "url": "https://digitalvirt.com/store/la-vps",
     "stock": "category",
     "available_pattern": "(?:立即订购|Order Now|立即购买)",
-    "buy_url": "https://digitalvirt.com/stores/la-vps",
+    "buy_url": "https://digitalvirt.com/store/la-vps",
     "notify_above": 0,
     "fetch": "direct"
   },
   {
     "name": "【全分类】DigitalVirt - 洛杉矶轻量 9929",
-    "url": "https://digitalvirt.com/stores/lightvm-9929",
+    "url": "https://digitalvirt.com/store/lightvm-9929",
     "stock": "category",
     "available_pattern": "(?:立即订购|Order Now|立即购买)",
-    "buy_url": "https://digitalvirt.com/stores/lightvm-9929",
+    "buy_url": "https://digitalvirt.com/store/lightvm-9929",
     "notify_above": 0,
     "fetch": "direct"
   },
   {
     "name": "【单品精选】DigitalVirt - 洛杉矶 9929 L1-2C1G (¥39/月)",
-    "url": "https://digitalvirt.com/stores/la-vps",
+    "url": "https://digitalvirt.com/store/la-vps",
     "stock": "badge",
     "oos_pattern": "L1-2C1G[\\s\\S]{0,150}?(?:缺货|已售罄|无货|Out of Stock)",
-    "buy_url": "https://digitalvirt.com/stores/la-vps",
+    "buy_url": "https://digitalvirt.com/store/la-vps",
     "notify_above": 0,
     "fetch": "direct"
   },
@@ -30,7 +30,7 @@
     "name": "【全分类】六六云 - 美西原生 9929 全线",
     "url": "https://666clouds.com/shop",
     "stock": "category",
-    "available_pattern": "9929[\\s\\S]{0,100}?(?:现货|立即选购)",
+    "available_pattern": "9929[^\\n<]{0,100}?现货",
     "buy_url": "https://666clouds.com/shop",
     "notify_above": 0,
     "fetch": "direct"
