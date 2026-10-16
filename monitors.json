@@ -142,8 +142,8 @@
     "name": "【单品精选】Saltyfish 咸鱼云 - 圣何塞 9929 mini款 (sjc.e1.mini)",
     "url": "https://portal.saltyfish.io/store/san-jose-kvm-vps-elite-network",
     "stock": "badge",
-    "verify_pattern": "sjc\\.e1\\.mini|sjc\\.e1",
-    "oos_pattern": "(?:sjc\\.e1\\.mini|sjc\\.e1)[\\s\\S]{0,200}?(?:0\\s*Available|Out of Stock|缺货|售罄)",
+    "verify_pattern": "sjc[.\\s-]*e[0-9]?[.\\s-]*mini|mini",
+    "oos_pattern": "(?:sjc[.\\s-]*e[0-9]?[.\\s-]*mini|mini)[\\s\\S]{0,250}?(?:0\\s*Available|Out of Stock|缺货|售罄|无货)",
     "buy_url": "https://portal.saltyfish.io/store/san-jose-kvm-vps-elite-network",
     "notify_above": 0,
     "fetch": "flare"
