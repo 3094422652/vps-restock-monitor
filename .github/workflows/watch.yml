@@ -31,7 +31,6 @@ jobs:
         env:
           TG_TOKEN: ${{ secrets.TG_TOKEN }}
           TG_CHAT: ${{ secrets.TG_CHAT }}
-          SERVERCHAN_KEY: ${{ secrets.SERVERCHAN_KEY }}
           PUSHPLUS_TOKEN: ${{ secrets.PUSHPLUS_TOKEN }}
           CHAIN_PAT: ${{ secrets.CHAIN_PAT }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

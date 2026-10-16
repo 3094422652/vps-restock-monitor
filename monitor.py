@@ -46,8 +46,7 @@ HEARTBEAT_HOURS = float(os.environ.get("HEARTBEAT_HOURS", "6"))   # 心跳消息
 NOTIFY_COOLDOWN = int(os.environ.get("NOTIFY_COOLDOWN", "600"))   # 10分钟防抖冷却（支持捕获15分钟未支付订单回滚）
 TG_TOKEN = os.environ.get("TG_TOKEN", "")
 TG_CHAT = os.environ.get("TG_CHAT", "")
-SERVERCHAN_KEY = os.environ.get("SERVERCHAN_KEY", "")   # Server酱 SendKey（微信推送，备用渠道）
-PUSHPLUS_TOKEN = os.environ.get("PUSHPLUS_TOKEN", "")   # PushPlus token（微信推送，备用渠道）
+PUSHPLUS_TOKEN = os.environ.get("PUSHPLUS_TOKEN", "")   # PushPlus token（微信推送通道）
 WEIXIN_HEARTBEAT = os.environ.get("WEIXIN_HEARTBEAT") == "1"  # 微信渠道是否也发心跳（默认只发补货警报）
 FLARESOLVERR_URL = os.environ.get("FLARESOLVERR_URL", "")
 CF_WORKER_URL = os.environ.get("CF_WORKER_URL", "").rstrip("/")
@@ -383,8 +382,11 @@ def clean_body_title(title, body):
 
 
 def weixin_send(title, body):
-    """通过 PushPlus / Server酱 推微信。优先使用 PushPlus（每日200条），未配置时回退到 Server酱。"""
-    sent = False
+    """通过 PushPlus 推送微信通知。每日 200 条额度。"""
+    if not PUSHPLUS_TOKEN:
+        log("[wechat/PushPlus] 未配置 PUSHPLUS_TOKEN，跳过微信推送")
+        return False
+
     body = clean_body_title(title, body)
     if body:
         if body.startswith("http://") or body.startswith("https://"):
@@ -394,54 +396,32 @@ def weixin_send(title, body):
     else:
         full_body = title
 
-    if PUSHPLUS_TOKEN:
-        try:
-            # PushPlus 官方限制：title 上限 100 字符，content 上限 20,000 字符 (POST JSON)
-            pp_title = title if len(title) <= 100 else (title[:99] + "…")
-            pp_content = full_body
-            if len(pp_content) > 20000:
-                pp_content = pp_content[:19900] + "\n\n*(内容过长已截断)*"
+    try:
+        # PushPlus 官方限制：title 上限 100 字符，content 上限 20,000 字符 (POST JSON)
+        pp_title = title if len(title) <= 100 else (title[:99] + "…")
+        pp_content = full_body
+        if len(pp_content) > 20000:
+            pp_content = pp_content[:19900] + "\n\n*(内容过长已截断)*"
 
-            payload = json.dumps({"token": PUSHPLUS_TOKEN, "title": pp_title,
-                                  "content": pp_content, "template": "markdown"}).encode()
-            req = urllib.request.Request("https://www.pushplus.plus/send",
-                                         data=payload,
-                                         headers={"Content-Type": "application/json"})
-            with urllib.request.urlopen(req, timeout=20) as r:
-                res = json.load(r)
-            if res.get("code") == 200:
-                sent = True
-                log("[wechat/PushPlus] 已发送")
-            else:
-                log("[wechat/PushPlus] 失败:", str(res)[:150])
-        except Exception as e:
-            log("[wechat/PushPlus] 发送失败:", repr(e))
-        return sent
-
-    if SERVERCHAN_KEY:
-        try:
-            # Server酱标题限制32字符，若超长保留31字加省略号，并在正文中呈现内容
-            short_title = title if len(title) <= 32 else (title[:31] + "…")
-            data = urllib.parse.urlencode({"title": short_title, "desp": full_body}).encode()
-            req = urllib.request.Request(
-                f"https://sctapi.ftqq.com/{SERVERCHAN_KEY}.send", data=data)
-            with urllib.request.urlopen(req, timeout=20) as r:
-                res = json.load(r)
-            if res.get("code") == 0:
-                sent = True
-                log("[wechat/Server酱] 已发送")
-            else:
-                log("[wechat/Server酱] 失败:", str(res)[:150])
-        except Exception as e:
-            log("[wechat/Server酱] 发送失败:", repr(e))
-        return sent
-
-    log("[wechat] 未配置微信推送渠道")
-    return None
+        payload = json.dumps({"token": PUSHPLUS_TOKEN, "title": pp_title,
+                              "content": pp_content, "template": "markdown"}).encode()
+        req = urllib.request.Request("https://www.pushplus.plus/send",
+                                     data=payload,
+                                     headers={"Content-Type": "application/json"})
+        with urllib.request.urlopen(req, timeout=20) as r:
+            res = json.load(r)
+        if res.get("code") == 200:
+            log("[wechat/PushPlus] 已发送")
+            return True
+        else:
+            log("[wechat/PushPlus] 失败:", str(res)[:150])
+    except Exception as e:
+        log("[wechat/PushPlus] 发送失败:", repr(e))
+    return False
 
 
 def notify(title, body, weixin=True):
-    """多渠道通知：Telegram + 微信（Server酱/PushPlus）。心跳类消息可指定 weixin=False 省额度。"""
+    """多渠道通知：Telegram + 微信 (PushPlus)。心跳类消息可指定 weixin=False 省额度。"""
     clean_body = clean_body_title(title, body)
     tg_send(f"{title}\n\n{clean_body}" if clean_body else title)
     if weixin:
