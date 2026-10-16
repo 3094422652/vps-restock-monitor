@@ -645,7 +645,7 @@ def peer_on_duty():
 
 def main():
     once = "--once" in sys.argv
-    if peer_on_duty():
+    if not once and peer_on_duty():
         log("[peer] 已有同伴窗口在岗，本班自动下岗（排班冗余）")
         return
     targets = load_targets()

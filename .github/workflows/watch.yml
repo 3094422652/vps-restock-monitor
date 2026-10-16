@@ -1,8 +1,7 @@
-name: watch (长驻值守)
+name: watch (长驻值守-已停用自动排班)
+# 已采用方案 A（5 分钟轻量瞬态错峰轮询），已全面关闭自动长驻排班以彻底消除封号风险
+# 如需临时测试可手动点击 workflow_dispatch 触发
 on:
-  schedule:
-    # UTC 每 4 小时一个值守窗口（1:11 / 5:11 / 9:11 ...），每窗口跑 4h05m，前后重叠几分钟实现无缝接力
-    - cron: "11 */4 * * *"
   workflow_dispatch:
 concurrency:
   group: vps-restock-watch
