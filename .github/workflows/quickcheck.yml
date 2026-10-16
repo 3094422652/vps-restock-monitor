@@ -26,7 +26,7 @@ jobs:
         with:
           python-version: "3.12"
       - run: pip install -q cryptography
-      - run: python monitor.py --once
+      - run: python monitor.py --once ${{ github.event_name == 'workflow_dispatch' && '--force' || '' }}
         env:
           TG_TOKEN: ${{ secrets.TG_TOKEN }}
           TG_CHAT: ${{ secrets.TG_CHAT }}
