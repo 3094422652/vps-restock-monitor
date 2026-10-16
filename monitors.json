@@ -121,13 +121,24 @@
   },
   {
     "name": "【全分类】AcckCloud - 洛杉矶 9929 全线",
-    "url": "https://acckcloud.com/cart.php",
-    "stock": "category",
-    "available_pattern": "9929[\\s\\S]{0,100}?(?:立即订购|Order Now|立即购买)",
-    "category_oos_pattern": "(?:缺货|已售罄|Out of Stock|0 Available)",
-    "buy_url": "https://acckcloud.com/cart.php",
+    "url": "https://acckcloud.com/api/sales-catalog",
+    "stock": "json",
+    "json_url": "https://acckcloud.com/api/sales-catalog",
+    "json_find_plans": {
+      "steps": [
+        {
+          "path": "plans",
+          "filter": {
+            "node_id": 6
+          }
+        }
+      ]
+    },
+    "json_stock_field": "stock",
+    "json_pick": "count_in_stock",
+    "buy_url": "https://acckcloud.com/store/server",
     "notify_above": 0,
-    "fetch": "flare"
+    "fetch": "direct"
   },
   {
     "name": "【全分类】Saltyfish 咸鱼云 - 圣何塞 9929 (Elite) 全线",

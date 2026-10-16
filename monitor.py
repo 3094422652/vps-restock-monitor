@@ -241,7 +241,7 @@ PANSTAR_KEY = base64.b64decode("26lAIOdVLW74vJFTawTAiA79kXTtdlibFh49gt+j5Zk=")
 
 
 def fetch_json(target):
-    url = target["json_url"]
+    url = target.get("json_url") or target["url"]
     req = urllib.request.Request(url, headers={
         "User-Agent": UA,
         "Accept": "application/json",
@@ -263,14 +263,14 @@ def _plans_list(data):
     if isinstance(data, list):
         return data
     if isinstance(data, dict):
-        for k in ("items", "list", "records", "data"):
+        for k in ("items", "list", "records", "data", "plans"):
             if isinstance(data.get(k), list):
                 return data[k]
     raise RuntimeError("plans 数据结构不认识，接口可能已改版")
 
 
 def _sellable(plans):
-    return [p for p in plans if not p.get("archived") and p.get("status", 0) == 0]
+    return [p for p in plans if not p.get("archived") and p.get("status", 0) == 0 and p.get("enabled", True)]
 
 
 def _json_find(data, spec):
@@ -309,21 +309,29 @@ def compute_stock_json(target):
         return p.get("name") or p.get("plan_name") or str(p.get("id"))
 
     def fmt(p):
-        return (f'{p.get("name")}: ${p.get("price") / 100:g}/月, '
-                f'{p.get("cpu")}核/{p.get("memory")}M内存/{p.get("disk")}G盘/{p.get("traffic")}G流量')
+        price_val = p.get("price")
+        if price_val is None and "monthly_price_cents" in p:
+            price_val = p["monthly_price_cents"] / 100
+            currency = "¥"
+        else:
+            price_val = (price_val or 0) / 100
+            currency = "$"
+        flow = p.get("traffic") or p.get("flow", 0)
+        return (f'{p.get("name")}: {currency}{price_val:g}/月, '
+                f'{p.get("cpu")}核/{p.get("memory")}M内存/{p.get("disk")}G盘/{flow}G流量')
 
     if pick == "plan_id":
         plan = next((p for p in plans if p.get("id") == target.get("plan_id")), None)
         if plan is None:
             raise RuntimeError(f'plan {target.get("plan_id")} 不存在或已下架')
         target["_detail"] = fmt(plan)
-        return 1 if plan.get(stock_field) else 0
+        return 1 if (plan.get(stock_field) if isinstance(plan.get(stock_field), (int, float)) else bool(plan.get(stock_field))) else 0
     if pick == "cheapest":
-        best = min(plans, key=lambda p: p["price"] if isinstance(p.get("price"), (int, float)) else 1e18)
+        best = min(plans, key=lambda p: (p.get("monthly_price_cents", p.get("price", 0)) if isinstance(p.get("price") or p.get("monthly_price_cents"), (int, float)) else 1e18))
         target["_detail"] = fmt(best)
         return 1 if best.get(stock_field) else 0
     if pick == "count_in_stock":
-        in_stock = [p for p in plans if p.get(stock_field)]
+        in_stock = [p for p in plans if (p.get(stock_field) > 0 if isinstance(p.get(stock_field), (int, float)) else bool(p.get(stock_field)))]
         if in_stock:
             target["_detail"] = "\n".join(
                 f"· {plan_label(p)}: {p.get(stock_field)} 台有货" for p in in_stock)
@@ -335,7 +343,7 @@ def stock_text(target, n):
     mode = target.get("stock", "count")
     if mode == "badge":
         return "有货" if n else "缺货 (0 Available)"
-    if mode == "category":
+    if mode == "category" or target.get("json_pick") == "count_in_stock":
         return f"有货 ({n} 款在售/补货)" if n else "全分类售罄"
     return f"{n} 台"
 
