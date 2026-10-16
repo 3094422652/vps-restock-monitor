@@ -111,7 +111,7 @@ def compute_stock(target, text=None):
     if mode == "badge":
         return 0 if re.search(target["oos_pattern"], text) else 1
     if mode == "category":
-        pattern = target.get("available_pattern", r"(?:立即订购|立即购买|Order Now|Add to Cart|Select|订购)")
+        pattern = target.get("available_pattern", r"(?:立即订购|立即购买|Order Now|Add to Cart|Select\b|订购)")
         matches = re.findall(pattern, text, re.I)
         return len(matches)
     if mode == "json":
@@ -120,8 +120,6 @@ def compute_stock(target, text=None):
         m = re.search(target["pattern"], text)
         return int(m.group(1)) if m else None
     return 1
-
-
 # ---- panstar.ai JSON 接口（响应 AES-256-GCM 加密，密钥来自其前端 JS）----
 
 PANSTAR_KEY = base64.b64decode("26lAIOdVLW74vJFTawTAiA79kXTtdlibFh49gt+j5Zk=")
@@ -220,10 +218,10 @@ def compute_stock_json(target):
 
 def stock_text(target, n):
     if target.get("stock", "count") == "badge":
-        return "有货" if n else "缺货（0 Available）"
-    return f"{n} 可用"
-
-
+        return "有货" if n else "缺货 (0 Available)"
+    if target.get("stock", "count") == "category":
+        return f"有货 ({n} 款在售/补货)" if n else "全分类售罄"
+    return f"{n} 台"
 def tg_send(text):
     if not (TG_TOKEN and TG_CHAT):
         log("[tg] 未配置 TG_TOKEN/TG_CHAT，本应发送:", text.replace("\n", " | "))
