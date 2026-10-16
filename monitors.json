@@ -1,9 +1,27 @@
 [
   {
-    "name": "【全分类】DigitalVirt - 洛杉矶 9929 精品全线",
+    "name": "【全分类】DigitalVirt - 洛杉矶 9929 旗舰全线",
     "url": "https://digitalvirt.com/stores/la-vps",
     "stock": "category",
     "available_pattern": "(?:立即订购|Order Now|立即购买)",
+    "buy_url": "https://digitalvirt.com/stores/la-vps",
+    "notify_above": 0,
+    "fetch": "direct"
+  },
+  {
+    "name": "【全分类】DigitalVirt - 洛杉矶轻量 9929",
+    "url": "https://digitalvirt.com/stores/lightvm-9929",
+    "stock": "category",
+    "available_pattern": "(?:立即订购|Order Now|立即购买)",
+    "buy_url": "https://digitalvirt.com/stores/lightvm-9929",
+    "notify_above": 0,
+    "fetch": "direct"
+  },
+  {
+    "name": "【单品精选】DigitalVirt - 洛杉矶 9929 L1-2C1G (¥39/月)",
+    "url": "https://digitalvirt.com/stores/la-vps",
+    "stock": "badge",
+    "oos_pattern": "L1-2C1G[\\s\\S]{0,150}?(?:缺货|已售罄|无货|Out of Stock)",
     "buy_url": "https://digitalvirt.com/stores/la-vps",
     "notify_above": 0,
     "fetch": "direct"
@@ -18,7 +36,7 @@
     "fetch": "direct"
   },
   {
-    "name": "【单品精选】六六云 - 美西 9929 原生IP优化款 (Shop 187)",
+    "name": "【单品精选】六六云 - 美西 9929 原生特惠 (Shop 187)",
     "url": "https://666clouds.com/shop/187",
     "stock": "badge",
     "oos_pattern": "(?:暂时缺货|缺货|售罄|0 Available)",
@@ -45,6 +63,15 @@
     "fetch": "flare"
   },
   {
+    "name": "【全分类】VMISS - 洛杉矶 TRI 三网优化全线",
+    "url": "https://app.vmiss.com/store/us-los-angeles-tri",
+    "stock": "category",
+    "available_pattern": "(?:Order Now|立即订购|加入购物车)",
+    "buy_url": "https://app.vmiss.com/store/us-los-angeles-tri",
+    "notify_above": 0,
+    "fetch": "flare"
+  },
+  {
     "name": "【全分类】ZgoCloud - 洛杉矶 9929&CMIN2 全线",
     "url": "https://clients.zgovps.com/index.php?rp=/store/los-angeles-amd-vps",
     "stock": "category",
@@ -54,7 +81,7 @@
     "fetch": "flare"
   },
   {
-    "name": "【单品精选】ZgoCloud - LA 9929&CMIN2 Starter",
+    "name": "【单品精选】ZgoCloud - 洛杉矶 9929 Starter",
     "url": "https://clients.zgovps.com/index.php?rp=/store/los-angeles-amd-vps",
     "stock": "badge",
     "oos_pattern": "(?:9929.*Starter|CMIN2.*Starter)[\\s\\S]{0,250}?(?:Out of Stock|缺货|0 Available|Sold Out)",
@@ -63,7 +90,7 @@
     "fetch": "flare"
   },
   {
-    "name": "【全分类】DMIT - 洛杉矶 Eyeball (EB/9929) 全线",
+    "name": "【全分类】DMIT - 洛杉矶 Eyeball (9929/CMIN2) 全线",
     "url": "https://www.dmit.io/cart.php",
     "stock": "category",
     "available_pattern": "(?:LAX\\.EB|Eyeball)[\\s\\S]{0,150}?(?:Order Now|立即订购)",
@@ -72,7 +99,7 @@
     "fetch": "flare"
   },
   {
-    "name": "【单品精选】DMIT - 洛杉矶 Eyeball WEE (LAX.EB.WEE)",
+    "name": "【单品精选】DMIT - 洛杉矶 Eyeball WEE ($39.9/年)",
     "url": "https://www.dmit.io/cart.php",
     "stock": "badge",
     "oos_pattern": "(?:LAX\\.EB\\.WEE|AN4\\.EB\\.WEE)[\\s\\S]{0,300}?(?:none-stock|Out of Stock|缺货|Sold Out)",
@@ -81,7 +108,7 @@
     "fetch": "flare"
   },
   {
-    "name": "【全分类】AcckCloud - 美西/美国 9929 全线",
+    "name": "【全分类】AcckCloud - 洛杉矶 9929 全线",
     "url": "https://acckcloud.com/cart.php",
     "stock": "category",
     "available_pattern": "9929[\\s\\S]{0,100}?(?:立即订购|Order Now|立即购买)",
