@@ -295,25 +295,9 @@ def tg_send(text):
 
 
 def weixin_send(title, body):
-    """通过 Server酱 / PushPlus 推微信，两个都配置就都发。返回是否至少成功一个。"""
+    """通过 PushPlus / Server酱 推微信。优先使用 PushPlus（每日200条），未配置时回退到 Server酱。"""
     sent = False
     full_body = f"### {title}\n\n{body}" if body else title
-    if SERVERCHAN_KEY:
-        try:
-            # Server酱标题限制32字符，若超长保留31字加省略号，并在正文中完整呈现商品名与直达链接
-            short_title = title if len(title) <= 32 else (title[:31] + "…")
-            data = urllib.parse.urlencode({"title": short_title, "desp": full_body}).encode()
-            req = urllib.request.Request(
-                f"https://sctapi.ftqq.com/{SERVERCHAN_KEY}.send", data=data)
-            with urllib.request.urlopen(req, timeout=20) as r:
-                res = json.load(r)
-            if res.get("code") == 0:
-                sent = True
-                log("[wechat/Server酱] 已发送")
-            else:
-                log("[wechat/Server酱] 失败:", str(res)[:150])
-        except Exception as e:
-            log("[wechat/Server酱] 发送失败:", repr(e))
     if PUSHPLUS_TOKEN:
         try:
             payload = json.dumps({"token": PUSHPLUS_TOKEN, "title": title,
@@ -330,10 +314,28 @@ def weixin_send(title, body):
                 log("[wechat/PushPlus] 失败:", str(res)[:150])
         except Exception as e:
             log("[wechat/PushPlus] 发送失败:", repr(e))
-    if not (SERVERCHAN_KEY or PUSHPLUS_TOKEN):
-        log("[wechat] 未配置微信推送渠道")
-        return None
-    return sent
+        return sent
+
+    if SERVERCHAN_KEY:
+        try:
+            # Server酱标题限制32字符，若超长保留31字加省略号，并在正文中完整呈现商品名与直达链接
+            short_title = title if len(title) <= 32 else (title[:31] + "…")
+            data = urllib.parse.urlencode({"title": short_title, "desp": full_body}).encode()
+            req = urllib.request.Request(
+                f"https://sctapi.ftqq.com/{SERVERCHAN_KEY}.send", data=data)
+            with urllib.request.urlopen(req, timeout=20) as r:
+                res = json.load(r)
+            if res.get("code") == 0:
+                sent = True
+                log("[wechat/Server酱] 已发送")
+            else:
+                log("[wechat/Server酱] 失败:", str(res)[:150])
+        except Exception as e:
+            log("[wechat/Server酱] 发送失败:", repr(e))
+        return sent
+
+    log("[wechat] 未配置微信推送渠道")
+    return None
 
 
 def notify(title, body, weixin=True):
