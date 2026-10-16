@@ -38,8 +38,8 @@
   {
     "name": "【单品精选】六六云 - 美西 9929 原生特惠 (Shop 187)",
     "url": "https://666clouds.com/shop/187",
-    "stock": "badge",
-    "oos_pattern": "(?:暂时缺货|缺货|售罄|0 Available)",
+    "stock": "count",
+    "pattern": "库存\\s*(\\d+)",
     "buy_url": "https://666clouds.com/shop/187",
     "notify_above": 0,
     "fetch": "direct"
@@ -58,7 +58,7 @@
     "url": "https://app.vmiss.com/store/us-los-angeles-9929",
     "stock": "badge",
     "oos_pattern": "US\\.LA\\.9929\\.Core[\\s\\S]{0,200}?(?:0\\s*(?:Available|台)|Out of Stock|缺货|售罄|无)",
-    "buy_url": "https://app.vmiss.com/store/us-los-angeles-9929/core",
+    "buy_url": "https://app.vmiss.com/store/us-los-angeles-9929",
     "notify_above": 0,
     "fetch": "flare"
   },
@@ -114,7 +114,7 @@
     "available_pattern": "9929[\\s\\S]{0,100}?(?:立即订购|Order Now|立即购买)",
     "buy_url": "https://acckcloud.com/cart.php",
     "notify_above": 0,
-    "fetch": "direct"
+    "fetch": "flare"
   },
   {
     "name": "【全分类】Saltyfish 咸鱼云 - 圣何塞 9929 (Elite) 全线",

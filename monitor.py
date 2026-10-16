@@ -1,12 +1,13 @@
 #!/usr/bin/env python3
 """VPS restock watcher.
 
-拉取商品页 -> 按 monitors.json 规则判断库存 -> 有货状态变化时推 Telegram。
+拉取商品页 -> 按 monitors.json 规则判断库存 -> 有货状态变化时推 Telegram/微信。
 仅用标准库。为 GitHub Actions 设计：
 - watch 模式：一个 job 连续跑 ~4 小时，内部每 CHECK_INTERVAL 秒查一次，
   时间预算用完干净退出，由下一个调度窗口无缝接力；
 - state.json 记录各目标上次库存，跨进程/跨 job 去重，只在状态变化时提交回仓库；
-- 被 Cloudflare 拦截的站点通过 FlareSolverr（无头浏览器服务）抓取。
+- 被 Cloudflare 拦截的站点通过 FlareSolverr（无头浏览器服务）抓取；
+- 内置防抖冷却机制（NOTIFY_COOLDOWN），避免单品抖动或页面偶发重定向产生重复推送。
 """
 import base64
 import json
@@ -28,6 +29,7 @@ except ImportError:
 CHECK_INTERVAL = int(os.environ.get("CHECK_INTERVAL", "40"))      # 每轮检查间隔（秒）
 MAX_MINUTES = float(os.environ.get("MAX_MINUTES", "349"))         # 本进程最长运行分钟数
 HEARTBEAT_HOURS = float(os.environ.get("HEARTBEAT_HOURS", "6"))   # 心跳消息间隔（小时）
+NOTIFY_COOLDOWN = int(os.environ.get("NOTIFY_COOLDOWN", "1800"))  # 30分钟防抖冷却（同单品不重复轰炸）
 TG_TOKEN = os.environ.get("TG_TOKEN", "")
 TG_CHAT = os.environ.get("TG_CHAT", "")
 SERVERCHAN_KEY = os.environ.get("SERVERCHAN_KEY", "")   # Server酱 SendKey（微信推送，备用渠道）
@@ -120,6 +122,8 @@ def compute_stock(target, text=None):
         m = re.search(target["pattern"], text)
         return int(m.group(1)) if m else None
     return 1
+
+
 # ---- panstar.ai JSON 接口（响应 AES-256-GCM 加密，密钥来自其前端 JS）----
 
 PANSTAR_KEY = base64.b64decode("26lAIOdVLW74vJFTawTAiA79kXTtdlibFh49gt+j5Zk=")
@@ -217,11 +221,14 @@ def compute_stock_json(target):
 
 
 def stock_text(target, n):
-    if target.get("stock", "count") == "badge":
+    mode = target.get("stock", "count")
+    if mode == "badge":
         return "有货" if n else "缺货 (0 Available)"
-    if target.get("stock", "count") == "category":
+    if mode == "category":
         return f"有货 ({n} 款在售/补货)" if n else "全分类售罄"
     return f"{n} 台"
+
+
 def tg_send(text):
     if not (TG_TOKEN and TG_CHAT):
         log("[tg] 未配置 TG_TOKEN/TG_CHAT，本应发送:", text.replace("\n", " | "))
@@ -306,23 +313,34 @@ def save_and_commit_state(state):
         json.dump(state, f, ensure_ascii=False, indent=1)
     if not ALLOW_STATE_COMMIT:
         return
+    token = os.environ.get("GITHUB_TOKEN", "") or os.environ.get("CHAIN_PAT", "")
+    repo = os.environ.get("GITHUB_REPOSITORY", "")
     try:
         def git(*args):
             return subprocess.run(("git",) + args, capture_output=True, text=True)
+
         git("add", os.path.relpath(path))
         c = git("-c", "user.name=stock-bot", "-c",
                 "user.email=actions@users.noreply.github.com",
                 "commit", "-m", "stock state update")
         if c.returncode != 0:
-            return  # 无变化或另一进程已提交
-        git("pull", "--rebase", "-q")
-        r = git("push", "-q", "origin", "HEAD")
-        if r.returncode != 0:
+            return  # 无变化或已提交
+
+        if token and repo:
+            remote = f"https://x-access-token:{token}@github.com/{repo}.git"
+            git("fetch", remote, "main")
+            git("rebase", "FETCH_HEAD")
+            r = git("push", remote, "HEAD:main")
+        else:
             git("pull", "--rebase", "-q")
-            git("push", "-q", "origin", "HEAD")
-        log("[state] 已提交")
+            r = git("push", "-q", "origin", "HEAD")
+
+        if r.returncode == 0:
+            log("[state] 已成功提交并推送到 GitHub")
+        else:
+            log(f"[state] 推送失败: {r.stderr.strip() or r.stdout.strip()}")
     except Exception as e:
-        log("[state] 提交失败(不影响监控):", repr(e))
+        log("[state] 提交异常:", repr(e))
 
 
 def dispatch_next_watch():
@@ -350,12 +368,9 @@ def dispatch_next_watch():
 
 
 def peer_on_duty():
-    """排班班次开工查岗：若已有值守窗口在跑，本班自动下岗（防止多班重叠）。
-    自触发接力的班次（workflow_dispatch）是被点名的接班人，不参与查岗。"""
-    if os.environ.get("GITHUB_EVENT_NAME") == "workflow_dispatch":
-        return False
+    """排班班次开工查岗：若已有值守窗口在跑，本班自动下岗（防止多班重叠）。"""
     repo = os.environ.get("GITHUB_REPOSITORY", "")
-    token = os.environ.get("CHAIN_PAT", "") or os.environ.get("GITHUB_TOKEN", "")
+    token = os.environ.get("GITHUB_TOKEN", "") or os.environ.get("CHAIN_PAT", "")
     if not (repo and token):
         return False
     req = urllib.request.Request(
@@ -374,7 +389,7 @@ def peer_on_duty():
         if str(run["id"]) == me or not run["name"].startswith("watch"):
             continue
         if run["status"] == "in_progress":
-            log(f"[peer] 发现已同伴在岗: run {run['id']}（{run['created_at'][11:16]} UTC 起）")
+            log(f"[peer] 发现已有同伴在岗: run {run['id']}（{run['created_at'][11:16]} UTC 起）")
             return True
     return False
 
@@ -386,6 +401,7 @@ def main():
         return
     targets = load_targets()
     prev = {t["name"]: load_state().get(t["name"]) for t in targets}
+    last_notified = {}  # 记录单品上次推送时间，防止频繁抖动导致重复推送
     if not once:
         notify("🟢 补货监控已启动", "盯住:\n" + "\n".join(
             f"· {t['name']}" for t in targets), weixin=False)
@@ -414,10 +430,16 @@ def main():
             if old is None:
                 log(f"[init] {t['name']}: {n}")
             elif n > threshold >= old:
-                detail = t.pop("_detail", "")
-                extra = f"\n{detail}" if detail else ""
-                notify(f"🚨 {t['name']} 补货啦: {stock_text(t, n)}！",
-                       f"{extra}\n{t.get('buy_url', t.get('url', ''))}".strip())
+                now = time.time()
+                last_t = last_notified.get(t["name"], 0)
+                if now - last_t >= NOTIFY_COOLDOWN:
+                    last_notified[t["name"]] = now
+                    detail = t.pop("_detail", "")
+                    extra = f"\n{detail}" if detail else ""
+                    notify(f"🚨 {t['name']} 补货啦: {stock_text(t, n)}！",
+                           f"{extra}\n{t.get('buy_url', t.get('url', ''))}".strip())
+                else:
+                    log(f"[cooldown] {t['name']}: 库存={n} (距上次通知仅 {int(now - last_t)}s，冷却防抖)")
             if old is None or n != old:
                 prev[t["name"]] = n
                 dirty = True

@@ -4,6 +4,9 @@ on:
     # 每 30 分钟单点检查一次，防止值守窗口因 GitHub 排队延迟出现空隙
     - cron: "9,39 * * * *"
   workflow_dispatch:
+concurrency:
+  group: vps-restock-watch
+  cancel-in-progress: false
 permissions:
   contents: write
 jobs:
@@ -29,5 +32,6 @@ jobs:
           TG_CHAT: ${{ secrets.TG_CHAT }}
           SERVERCHAN_KEY: ${{ secrets.SERVERCHAN_KEY }}
           PUSHPLUS_TOKEN: ${{ secrets.PUSHPLUS_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           FLARESOLVERR_URL: http://localhost:8191
           ALLOW_STATE_COMMIT: "1"

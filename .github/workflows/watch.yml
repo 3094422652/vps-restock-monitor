@@ -4,6 +4,9 @@ on:
     # UTC 每 4 小时一个值守窗口（1:11 / 5:11 / 9:11 ...），每窗口跑 4h05m，前后重叠几分钟实现无缝接力
     - cron: "11 */4 * * *"
   workflow_dispatch:
+concurrency:
+  group: vps-restock-watch
+  cancel-in-progress: true
 permissions:
   contents: write
   actions: write
@@ -31,6 +34,7 @@ jobs:
           SERVERCHAN_KEY: ${{ secrets.SERVERCHAN_KEY }}
           PUSHPLUS_TOKEN: ${{ secrets.PUSHPLUS_TOKEN }}
           CHAIN_PAT: ${{ secrets.CHAIN_PAT }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           FLARESOLVERR_URL: http://localhost:8191
           ALLOW_STATE_COMMIT: "1"
           MAX_MINUTES: "244"
