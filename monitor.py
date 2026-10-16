@@ -22,7 +22,7 @@ import time
 import urllib.error
 import urllib.parse
 import urllib.request
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
 
 if sys.stdout.encoding and sys.stdout.encoding.lower() not in ("utf-8", "utf8"):
     try:
@@ -30,6 +30,10 @@ if sys.stdout.encoding and sys.stdout.encoding.lower() not in ("utf-8", "utf8"):
         sys.stderr.reconfigure(encoding="utf-8", errors="replace")
     except Exception:
         pass
+
+def bj_now_str():
+    bj_tz = timezone(timedelta(hours=8))
+    return datetime.now(bj_tz).strftime("%Y-%m-%d %H:%M:%S")
 
 try:
     from cryptography.hazmat.primitives.ciphers.aead import AESGCM
@@ -39,7 +43,7 @@ except ImportError:
 CHECK_INTERVAL = int(os.environ.get("CHECK_INTERVAL", "40"))      # 每轮检查间隔（秒）
 MAX_MINUTES = float(os.environ.get("MAX_MINUTES", "349"))         # 本进程最长运行分钟数
 HEARTBEAT_HOURS = float(os.environ.get("HEARTBEAT_HOURS", "6"))   # 心跳消息间隔（小时）
-NOTIFY_COOLDOWN = int(os.environ.get("NOTIFY_COOLDOWN", "1800"))  # 30分钟防抖冷却（同单品不重复推送）
+NOTIFY_COOLDOWN = int(os.environ.get("NOTIFY_COOLDOWN", "600"))   # 10分钟防抖冷却（支持捕获15分钟未支付订单回滚）
 TG_TOKEN = os.environ.get("TG_TOKEN", "")
 TG_CHAT = os.environ.get("TG_CHAT", "")
 SERVERCHAN_KEY = os.environ.get("SERVERCHAN_KEY", "")   # Server酱 SendKey（微信推送，备用渠道）
@@ -489,6 +493,7 @@ def main():
     start = time.time()
     last_beat = start
     while True:
+        cycle_start = time.time()
         cache = {}
         dirty = False
         for t in targets:
@@ -521,17 +526,47 @@ def main():
 
             if old is None:
                 log(f"[init] {t['name']}: {n}")
-            elif n > threshold >= old:
-                now = time.time()
-                last_t = last_notified.get(t["name"], 0)
-                if now - last_t >= NOTIFY_COOLDOWN:
-                    last_notified[t["name"]] = now
-                    detail = t.pop("_detail", "")
-                    extra = f"\n{detail}" if detail else ""
-                    notify(f"🚨 {t['name']} 补货啦: {stock_text(t, n)}！",
-                           f"{extra}\n{t.get('buy_url', t.get('url', ''))}".strip())
-                else:
-                    log(f"[cooldown] {t['name']}: 库存={n} (距上次通知仅 {int(now - last_t)}s，冷却防抖)")
+            else:
+                is_restock = False
+                restock_reason = ""
+                # 判定 1：从无到有经典补货（缺货/售罄 -> 有货）
+                if n > threshold >= old:
+                    is_restock = True
+                    restock_reason = f"缺货上架（现已可购: {stock_text(t, n)}）"
+                # 判定 2：分类模式增量补货（例如 1 款增至 3 款，说明上了特惠新款或原有缺货款恢复）
+                elif t.get("stock") == "category" and n > old > threshold:
+                    is_restock = True
+                    restock_reason = f"新增在售款式（由 {old} 款增至 {n} 款）"
+                # 判定 3：数字库存大幅补货（之前仅剩少量尾货 <=5 台，突然批量补充 >=5 台）
+                elif t.get("stock") == "count" and old <= 5 and n >= old + 5:
+                    is_restock = True
+                    restock_reason = f"库存补充上架（由 {old} 台增至 {n} 台）"
+
+                if is_restock:
+                    now = time.time()
+                    last_t = last_notified.get(t["name"], 0)
+                    if now - last_t >= NOTIFY_COOLDOWN:
+                        last_notified[t["name"]] = now
+                        detail = t.pop("_detail", "")
+                        bj_time = bj_now_str()
+                        buy_link = t.get("buy_url", t.get("url", ""))
+
+                        card_lines = [
+                            f"### 🚨 {t['name']} 补货啦！",
+                            f"- ⏱ **检测时间**：{bj_time} (北京时间)",
+                            f"- 📦 **变动详情**：{restock_reason}",
+                        ]
+                        if detail:
+                            card_lines.append(f"- 📋 **套餐信息**：{detail}")
+                        card_lines.append(f"- 🛒 **购买直链**：[点击立即前往官网购买]({buy_link})")
+                        card_lines.append("\n*(热门套餐库存极快耗尽，建议点击直链迅速锁定订单)*")
+
+                        body_md = "\n".join(card_lines)
+                        title_str = f"🚨 {t['name']} 补货啦: {stock_text(t, n)}！"
+                        notify(title_str, body_md)
+                        time.sleep(1)  # 突发多商品补货时的平滑缓冲，防止推送接口突发限速
+                    else:
+                        log(f"[cooldown] {t['name']}: 库存={n} (距上次通知仅 {int(now - last_t)}s，冷却防抖)")
 
             if old is None or n != old:
                 prev[t["name"]] = n
@@ -551,7 +586,10 @@ def main():
             log("时间预算用完，交接下一班")
             dispatch_next_watch()
             break
-        time.sleep(CHECK_INTERVAL)
+        # 动态周期漂移补偿：减去抓取消耗的时间，让检查间隔锁定在预期秒数，大幅提升捡漏敏锐度
+        elapsed = time.time() - cycle_start
+        sleep_sec = max(5, CHECK_INTERVAL - elapsed)
+        time.sleep(sleep_sec)
 
 
 if __name__ == "__main__":
