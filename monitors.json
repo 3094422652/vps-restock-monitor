@@ -115,5 +115,41 @@
     "buy_url": "https://acckcloud.com/cart.php",
     "notify_above": 0,
     "fetch": "direct"
+  },
+  {
+    "name": "【全分类】Saltyfish 咸鱼云 - 圣何塞 9929 (Elite) 全线",
+    "url": "https://portal.saltyfish.io/store/san-jose-kvm-vps-elite-network",
+    "stock": "category",
+    "available_pattern": "(?:Order Now|立即订购|Add to Cart)",
+    "buy_url": "https://portal.saltyfish.io/store/san-jose-kvm-vps-elite-network",
+    "notify_above": 0,
+    "fetch": "flare"
+  },
+  {
+    "name": "【单品精选】Saltyfish 咸鱼云 - 圣何塞 9929 mini款 (sjc.e1.mini)",
+    "url": "https://portal.saltyfish.io/store/san-jose-kvm-vps-elite-network",
+    "stock": "badge",
+    "oos_pattern": "(?:sjc\\.e1\\.mini|sjc\\.e1)[\\s\\S]{0,200}?(?:0\\s*Available|Out of Stock|缺货|售罄)",
+    "buy_url": "https://portal.saltyfish.io/store/san-jose-kvm-vps-elite-network",
+    "notify_above": 0,
+    "fetch": "flare"
+  },
+  {
+    "name": "【全分类】V.PS - 圣何塞 9929 Cloud KVM 全线",
+    "url": "https://vps.hosting/cart/san-jose-cloud-kvm-vps/",
+    "stock": "category",
+    "available_pattern": "(?:Order Now|Order|Select|立即订购)",
+    "buy_url": "https://vps.hosting/cart/san-jose-cloud-kvm-vps/",
+    "notify_above": 0,
+    "fetch": "flare"
+  },
+  {
+    "name": "【单品精选】V.PS - 圣何塞 9929 Starter特惠",
+    "url": "https://vps.hosting/cart/san-jose-cloud-kvm-vps/",
+    "stock": "badge",
+    "oos_pattern": "Starter[\\s\\S]{0,200}?(?:Out of Stock|0 Available|Sold Out|缺货)",
+    "buy_url": "https://vps.hosting/cart/san-jose-cloud-kvm-vps/",
+    "notify_above": 0,
+    "fetch": "flare"
   }
 ]
