@@ -13,13 +13,6 @@ jobs:
   watch:
     runs-on: ubuntu-latest
     timeout-minutes: 255
-    services:
-      flaresolverr:
-        image: ghcr.io/flaresolverr/flaresolverr:v3.3.21
-        ports:
-          - 8191:8191
-        env:
-          LOG_LEVEL: info
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
         with:
@@ -27,7 +20,6 @@ jobs:
       - uses: actions/setup-python@42375524e23c412d93fb67b49958b491fce71c38 # v5.4.0
         with:
           python-version: "3.12"
-      - run: pip install -q cryptography
       - run: python monitor.py
         env:
           TG_TOKEN: ${{ secrets.TG_TOKEN }}
@@ -35,7 +27,6 @@ jobs:
           PUSHPLUS_TOKEN: ${{ secrets.PUSHPLUS_TOKEN }}
           CHAIN_PAT: ${{ secrets.CHAIN_PAT }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          FLARESOLVERR_URL: http://localhost:8191
           CF_WORKER_URL: ${{ secrets.CF_WORKER_URL }}
           ALLOW_STATE_COMMIT: "1"
           MAX_MINUTES: "244"
