@@ -297,10 +297,22 @@ def tg_send(text):
 def weixin_send(title, body):
     """通过 PushPlus / Server酱 推微信。优先使用 PushPlus（每日200条），未配置时回退到 Server酱。"""
     sent = False
-    full_body = f"### {title}\n\n{body}" if body else title
     if PUSHPLUS_TOKEN:
         try:
-            payload = json.dumps({"token": PUSHPLUS_TOKEN, "title": title,
+            # PushPlus 官方限制：title 上限 100 字符，content 上限 20,000 字符 (POST JSON)
+            pp_title = title if len(title) <= 100 else (title[:99] + "…")
+            if body:
+                if body.startswith("http://") or body.startswith("https://"):
+                    full_body = f"### {title}\n\n🛒 **购买直链**：[{body}]({body})"
+                else:
+                    full_body = f"### {title}\n\n{body}"
+            else:
+                full_body = title
+
+            if len(full_body) > 20000:
+                full_body = full_body[:19900] + "\n\n*(内容过长已截断)*"
+
+            payload = json.dumps({"token": PUSHPLUS_TOKEN, "title": pp_title,
                                   "content": full_body, "template": "markdown"}).encode()
             req = urllib.request.Request("https://www.pushplus.plus/send",
                                          data=payload,
