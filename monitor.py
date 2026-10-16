@@ -58,8 +58,26 @@ FLARE_SESSION = "vpsmon"
 _flare_ready = False
 
 
+def sanitize_secret(val):
+    if val is None:
+        return ""
+    text = str(val)
+    # 过滤 Git 远端凭证：https://user:token@github.com
+    text = re.sub(r"https?://[^@\s/]+@", "https://***@", text)
+    # 过滤 Telegram bot 令牌 URL
+    text = re.sub(r"/bot[0-9]+:[A-Za-z0-9_-]+(/|$)", r"/bot***/\1", text)
+    # 过滤 GitHub 各类 Token (ghp_, ghs_, gho_, ghu_, ghr_)
+    text = re.sub(r"(ghp|ghs|gho|ghu|ghr)_[A-Za-z0-9_]{20,}", r"\1_***", text)
+    # 过滤当前运行时已配置的敏感 Token 明文
+    for secret_env in (PUSHPLUS_TOKEN, TG_TOKEN, os.environ.get("CHAIN_PAT", ""), os.environ.get("GITHUB_TOKEN", "")):
+        if secret_env and len(secret_env) >= 8:
+            text = text.replace(secret_env, secret_env[:4] + "***")
+    return text
+
+
 def log(*a):
-    print(datetime.now(timezone.utc).strftime("%H:%M:%S"), *a, flush=True)
+    cleaned = [sanitize_secret(x) for x in a]
+    print(datetime.now(timezone.utc).strftime("%H:%M:%S"), *cleaned, flush=True)
 
 
 def http_get(url, timeout=25):

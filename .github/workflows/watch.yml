@@ -9,21 +9,23 @@ concurrency:
   cancel-in-progress: true
 permissions:
   contents: write
-  actions: write
+  actions: read
 jobs:
   watch:
     runs-on: ubuntu-latest
     timeout-minutes: 255
     services:
       flaresolverr:
-        image: ghcr.io/flaresolverr/flaresolverr:latest
+        image: ghcr.io/flaresolverr/flaresolverr:v3.3.21
         ports:
           - 8191:8191
         env:
           LOG_LEVEL: info
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@42375524e23c412d93fb67b49958b491fce71c38 # v5.4.0
         with:
           python-version: "3.12"
       - run: pip install -q cryptography

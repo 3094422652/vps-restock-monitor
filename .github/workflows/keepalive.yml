@@ -10,9 +10,16 @@ jobs:
   keepalive:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - run: |
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
+      - name: Keepalive commit
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPO: ${{ github.repository }}
+        run: |
           git config user.name "keepalive-bot"
           git config user.email "actions@users.noreply.github.com"
-          git commit --allow-empty -m "keepalive $(date -u +%F)"
-          git push
+          TODAY=$(date -u +%F)
+          git commit --allow-empty -m "keepalive $TODAY"
+          git push "https://x-access-token:${GITHUB_TOKEN}@github.com/${REPO}.git" HEAD:main
