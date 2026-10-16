@@ -24,6 +24,13 @@ import urllib.parse
 import urllib.request
 from datetime import datetime, timezone
 
+if sys.stdout.encoding and sys.stdout.encoding.lower() not in ("utf-8", "utf8"):
+    try:
+        sys.stdout.reconfigure(encoding="utf-8", errors="replace")
+        sys.stderr.reconfigure(encoding="utf-8", errors="replace")
+    except Exception:
+        pass
+
 try:
     from cryptography.hazmat.primitives.ciphers.aead import AESGCM
 except ImportError:
@@ -79,13 +86,22 @@ def flare_get(url):
     if not FLARESOLVERR_URL:
         raise RuntimeError("页面被 Cloudflare 拦截，且未配置 FLARESOLVERR_URL")
     if not _flare_ready:
-        _flare_post({"cmd": "sessions.create", "session": FLARE_SESSION})
+        try:
+            _flare_post({"cmd": "sessions.create", "session": FLARE_SESSION})
+        except Exception:
+            pass
         _flare_ready = True
     data = _flare_post({"cmd": "request.get", "url": url,
                         "session": FLARE_SESSION, "maxTimeout": 60000})
     if data.get("status") != "ok":
-        _flare_post({"cmd": "sessions.destroy", "session": FLARE_SESSION})
-        _flare_post({"cmd": "sessions.create", "session": FLARE_SESSION})
+        try:
+            _flare_post({"cmd": "sessions.destroy", "session": FLARE_SESSION})
+        except Exception:
+            pass
+        try:
+            _flare_post({"cmd": "sessions.create", "session": FLARE_SESSION})
+        except Exception:
+            pass
         data = _flare_post({"cmd": "request.get", "url": url,
                             "session": FLARE_SESSION, "maxTimeout": 60000})
         if data.get("status") != "ok":
@@ -279,9 +295,12 @@ def tg_send(text):
 def weixin_send(title, body):
     """通过 Server酱 / PushPlus 推微信，两个都配置就都发。返回是否至少成功一个。"""
     sent = False
+    full_body = f"### {title}\n\n{body}" if body else title
     if SERVERCHAN_KEY:
         try:
-            data = urllib.parse.urlencode({"title": title[:32], "desp": body}).encode()
+            # Server酱标题限制32字符，若超长保留31字加省略号，并在正文中完整呈现商品名与直达链接
+            short_title = title if len(title) <= 32 else (title[:31] + "…")
+            data = urllib.parse.urlencode({"title": short_title, "desp": full_body}).encode()
             req = urllib.request.Request(
                 f"https://sctapi.ftqq.com/{SERVERCHAN_KEY}.send", data=data)
             with urllib.request.urlopen(req, timeout=20) as r:
@@ -296,7 +315,7 @@ def weixin_send(title, body):
     if PUSHPLUS_TOKEN:
         try:
             payload = json.dumps({"token": PUSHPLUS_TOKEN, "title": title,
-                                  "content": body, "template": "txt"}).encode()
+                                  "content": full_body, "template": "markdown"}).encode()
             req = urllib.request.Request("https://www.pushplus.plus/send",
                                          data=payload,
                                          headers={"Content-Type": "application/json"})
@@ -402,6 +421,8 @@ def dispatch_next_watch():
 
 def peer_on_duty():
     """排班班次开工查岗：若已有值守窗口在跑，本班自动下岗（防止多班重叠）。"""
+    if "--force" in sys.argv or os.environ.get("FORCE_CHECK") == "1":
+        return False
     repo = os.environ.get("GITHUB_REPOSITORY", "")
     token = os.environ.get("GITHUB_TOKEN", "") or os.environ.get("CHAIN_PAT", "")
     if not (repo and token):
@@ -422,6 +443,16 @@ def peer_on_duty():
         if str(run["id"]) == me or not run["name"].startswith("watch"):
             continue
         if run["status"] == "in_progress":
+            # 若同伴已运行超 3.5 小时（210分钟），说明同伴即将结束下岗，本班应当接力，不能退岗
+            try:
+                created_str = run.get("created_at", "")
+                created_dt = datetime.fromisoformat(created_str.replace("Z", "+00:00"))
+                age_seconds = (datetime.now(timezone.utc) - created_dt).total_seconds()
+                if age_seconds > 210 * 60:
+                    log(f"[peer] 发现老窗口 run {run['id']} 已运行 {int(age_seconds/60)}m，本班正常接班上岗")
+                    continue
+            except Exception:
+                pass
             log(f"[peer] 发现已有同伴在岗: run {run['id']}（{run['created_at'][11:16]} UTC 起）")
             return True
     return False
