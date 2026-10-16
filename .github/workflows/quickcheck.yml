@@ -12,7 +12,7 @@ permissions:
 jobs:
   check:
     runs-on: ubuntu-latest
-    timeout-minutes: 5
+    timeout-minutes: 10
     services:
       flaresolverr:
         image: ghcr.io/flaresolverr/flaresolverr:v3.3.21
