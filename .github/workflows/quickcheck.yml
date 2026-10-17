@@ -1,7 +1,7 @@
-name: check (5分钟错峰快查)
+name: check (3分钟高敏快查)
 on:
   schedule:
-    # 方案 A：每 5 分钟错峰单点快查（避开 0/5/10 整倍数高峰，2, 7, 12, 17, 22...）
+    # 兜底定时排班（主力由 Cloudflare Worker Webhook 每 3 分钟准时唤醒）
     - cron: "2,7,12,17,22,27,32,37,42,47,52,57 * * * *"
   workflow_dispatch:
 concurrency:
