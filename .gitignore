@@ -1,3 +1,10 @@
 __pycache__/
 *.pyc
 test-*.html
+scratch/
+*.log
+*.tmp
+job_*.txt
+run_logs_*
+commit_diffs.txt
+*.png
