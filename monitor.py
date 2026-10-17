@@ -36,10 +36,6 @@ def bj_now_str():
     bj_tz = timezone(timedelta(hours=8))
     return datetime.now(bj_tz).strftime("%Y-%m-%d %H:%M:%S")
 
-try:
-    from cryptography.hazmat.primitives.ciphers.aead import AESGCM
-except ImportError:
-    AESGCM = None
 
 CHECK_INTERVAL = int(os.environ.get("CHECK_INTERVAL", "40"))      # 每轮检查间隔（秒）
 MAX_MINUTES = float(os.environ.get("MAX_MINUTES", "349"))         # 本进程最长运行分钟数
@@ -81,7 +77,7 @@ def log(*a):
     print(datetime.now(timezone.utc).strftime("%H:%M:%S"), *cleaned, flush=True)
 
 
-def http_get(url, timeout=25):
+def http_get(url, timeout=15):
     req = urllib.request.Request(url, headers={
         "User-Agent": UA,
         "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8",
@@ -340,28 +336,14 @@ def compute_stock_vpsrestock(target, html):
         return in_stock_count
 
 
-# ---- panstar.ai JSON 接口（响应 AES-256-GCM 加密，密钥来自其前端 JS）----
-
-PANSTAR_KEY = base64.b64decode("26lAIOdVLW74vJFTawTAiA79kXTtdlibFh49gt+j5Zk=")
-
-
-def fetch_json(target):
+def fetch_json(target, timeout=15):
     url = target.get("json_url") or target["url"]
     req = urllib.request.Request(url, headers={
         "User-Agent": UA,
         "Accept": "application/json",
     })
-    with urllib.request.urlopen(req, timeout=25) as r:
-        encrypted = r.headers.get("X-Api-Encrypt")
-        iv = r.headers.get("X-Api-Encrypt-Iv")
-        data = json.loads(r.read())
-    if encrypted == "1" or isinstance(data.get("ciphertext"), str):
-        if AESGCM is None:
-            raise RuntimeError("需要 pip install cryptography 才能解密 panstar 响应")
-        plain = AESGCM(PANSTAR_KEY).decrypt(base64.b64decode(iv),
-                                            base64.b64decode(data["ciphertext"]), None)
-        data = json.loads(plain)
-    return data
+    with urllib.request.urlopen(req, timeout=timeout) as r:
+        return json.loads(r.read())
 
 
 def _plans_list(data):
