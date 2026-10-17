@@ -13,6 +13,7 @@
   3) 推送冷却窗口 (NOTIFY_COOLDOWN)：同一单品 30 分钟内绝不重复警报，杜绝消息轰炸。
 """
 import base64
+import html
 import json
 import os
 import re
@@ -182,7 +183,7 @@ def fetch_html(target):
             log(f"[cf_worker] {url} Worker代理失败({e})，尝试 FlareSolverr/直连备用")
             if FLARESOLVERR_URL:
                 return flare_get(url)
-            raise
+            return http_get(url)
 
     if mode == "flare":
         try:
@@ -553,15 +554,27 @@ def weixin_send(title, body):
     return False
 
 
+def format_tg_html(title, body):
+    links = []
+    def save_link(m):
+        label = html.escape(m.group(1), quote=False)
+        url = m.group(2).replace("&", "&amp;")
+        links.append(f'<a href="{url}">{label}</a>')
+        return f"@@LINK_{len(links)-1}@@"
+
+    t_safe = html.escape(title, quote=False)
+    b_token = re.sub(r"\[([^\]]+)\]\((https?://[^\)]+)\)", save_link, body)
+    b_safe = html.escape(b_token, quote=False)
+    b_safe = re.sub(r"\*\*([^*]+)\*\*", r"<b>\1</b>", b_safe)
+    for i, l_html in enumerate(links):
+        b_safe = b_safe.replace(f"@@LINK_{i}@@", l_html)
+    return f"<b>{t_safe}</b>\n\n{b_safe}" if b_safe else f"<b>{t_safe}</b>"
+
+
 def notify(title, body, weixin=True):
     """多渠道通知：Telegram + 微信 (PushPlus)。心跳类消息可指定 weixin=False 省额度。"""
     clean_body = clean_body_title(title, body)
-
-    # Telegram 采用富文本 HTML 格式渲染链接与重点加粗
-    tg_body = clean_body
-    tg_body = re.sub(r"\[([^\]]+)\]\((https?://[^\)]+)\)", r'<a href="\2">\1</a>', tg_body)
-    tg_body = re.sub(r"\*\*([^*]+)\*\*", r"<b>\1</b>", tg_body)
-    tg_text = f"<b>{title}</b>\n\n{tg_body}" if tg_body else f"<b>{title}</b>"
+    tg_text = format_tg_html(title, clean_body)
     tg_send(tg_text, html=True)
 
     if weixin:
