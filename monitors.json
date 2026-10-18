@@ -201,5 +201,16 @@
     "buy_url": "https://vps.hosting/cart/san-jose-cloud-kvm-vps/",
     "notify_above": 0,
     "fetch": "direct"
+  },
+  {
+    "name": "【单品精选】CloudSilk 白丝云 - 圣何塞 9929 丐版套餐A (¥239.99/年)",
+    "url": "https://cloudsilk.io/store/mei-guo-sheng-he-sai-jing-pin-da-lu-you-hua-bgp9929",
+    "stock": "badge",
+    "verify_pattern": "套餐A",
+    "oos_pattern": "套餐A\\s*0\\s*可用",
+    "in_stock_pattern": "套餐A[\\s\\S]{0,150}?立即订购",
+    "buy_url": "https://cloudsilk.io/store/mei-guo-sheng-he-sai-jing-pin-da-lu-you-hua-bgp9929/jing-pin-da-lu-you-hua-bgp-tao-can-a",
+    "notify_above": 0,
+    "fetch": "direct"
   }
 ]
