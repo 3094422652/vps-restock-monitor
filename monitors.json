@@ -31,25 +31,6 @@
     "fetch": "direct"
   },
   {
-    "name": "【全分类】六六云 - 美西原生 9929 全线",
-    "url": "https://666clouds.com/shop",
-    "stock": "category",
-    "available_pattern": "9929[^\\n<]{0,100}?现货",
-    "category_oos_pattern": "(?:暂时缺货|缺货|售罄|0 Available)",
-    "buy_url": "https://666clouds.com/shop",
-    "notify_above": 0,
-    "fetch": "direct"
-  },
-  {
-    "name": "【单品精选】六六云 - 美西 9929 原生特惠 (Shop 187)",
-    "url": "https://666clouds.com/shop/187",
-    "stock": "count",
-    "pattern": "库存\\s*(\\d+)",
-    "buy_url": "https://666clouds.com/shop/187",
-    "notify_above": 0,
-    "fetch": "direct"
-  },
-  {
     "name": "【全分类】VMISS - 洛杉矶 9929 全线",
     "url": "https://vpsrestock.com/vmiss/",
     "stock": "vpsrestock",
@@ -159,26 +140,6 @@
     "json_pick": "plan_id",
     "plan_id": 16,
     "buy_url": "https://acckcloud.com/store/server",
-    "notify_above": 0,
-    "fetch": "direct"
-  },
-  {
-    "name": "【全分类】Saltyfish 咸鱼云 - 圣何塞 9929 (Elite) 全线",
-    "url": "https://vpsrestock.com/saltyfish/",
-    "stock": "vpsrestock",
-    "filter_pattern": "San Jose Elite|sjc\\.e1",
-    "vpsrestock_mode": "category",
-    "buy_url": "https://portal.saltyfish.io/store/san-jose-kvm-vps-elite-network",
-    "notify_above": 0,
-    "fetch": "direct"
-  },
-  {
-    "name": "【单品精选】Saltyfish 咸鱼云 - 圣何塞 9929 mini款 (sjc.e1.mini)",
-    "url": "https://vpsrestock.com/saltyfish/",
-    "stock": "vpsrestock",
-    "filter_pattern": "sjc\\.e1\\.mini",
-    "vpsrestock_mode": "single",
-    "buy_url": "https://portal.saltyfish.io/store/san-jose-kvm-vps-elite-network",
     "notify_above": 0,
     "fetch": "direct"
   },
