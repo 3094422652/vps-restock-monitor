@@ -31,11 +31,11 @@
     "fetch": "direct"
   },
   {
-    "name": "【全分类】VMISS - 洛杉矶 9929 全线",
+    "name": "【单品精选】VMISS - 洛杉矶 9929 Basic",
     "url": "https://vpsrestock.com/vmiss/",
     "stock": "vpsrestock",
-    "filter_pattern": "9929|US\\.LA\\.9929",
-    "vpsrestock_mode": "category",
+    "filter_pattern": "US\\.LA\\.9929\\.Basic|9929.*Basic",
+    "vpsrestock_mode": "single",
     "buy_url": "https://app.vmiss.com/store/us-los-angeles-9929",
     "notify_above": 0,
     "fetch": "direct"
@@ -51,10 +51,10 @@
     "fetch": "direct"
   },
   {
-    "name": "【全分类】VMISS - 洛杉矶 TRI 三网优化全线",
+    "name": "【特惠精选】VMISS - 洛杉矶 TRI 三网优化 (Basic/Core)",
     "url": "https://vpsrestock.com/vmiss/",
     "stock": "vpsrestock",
-    "filter_pattern": "洛杉矶.*TRI|US\\.LA\\.TRI",
+    "filter_pattern": "US\\.LA\\.TRI.*(?:Basic|Core)|洛杉矶.*TRI.*(?:Basic|Core)",
     "vpsrestock_mode": "category",
     "buy_url": "https://app.vmiss.com/store/us-los-angeles-tri",
     "notify_above": 0,
