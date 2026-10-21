@@ -37,6 +37,8 @@
     "filter_pattern": "US\\.LA\\.9929\\.Basic|9929.*Basic",
     "vpsrestock_mode": "single",
     "buy_url": "https://app.vmiss.com/store/us-los-angeles-9929",
+    "promo_code": "20%off",
+    "promo_desc": "结账输入享全场 8 折循环折扣",
     "notify_above": 0,
     "fetch": "direct"
   },
@@ -47,6 +49,8 @@
     "filter_pattern": "US\\.LA\\.9929\\.Core|9929.*Core",
     "vpsrestock_mode": "single",
     "buy_url": "https://app.vmiss.com/store/us-los-angeles-9929",
+    "promo_code": "20%off",
+    "promo_desc": "结账输入享全场 8 折循环折扣",
     "notify_above": 0,
     "fetch": "direct"
   },
@@ -57,6 +61,8 @@
     "filter_pattern": "US\\.LA\\.TRI.*(?:Basic|Core)|洛杉矶.*TRI.*(?:Basic|Core)",
     "vpsrestock_mode": "category",
     "buy_url": "https://app.vmiss.com/store/us-los-angeles-tri",
+    "promo_code": "20%off",
+    "promo_desc": "结账输入享全场 8 折循环折扣",
     "notify_above": 0,
     "fetch": "direct"
   },
@@ -171,6 +177,8 @@
     "oos_pattern": "套餐A\\s*0\\s*可用",
     "in_stock_pattern": "套餐A[\\s\\S]{0,150}?立即订购",
     "buy_url": "https://cloudsilk.io/store/mei-guo-sheng-he-sai-jing-pin-da-lu-you-hua-bgp9929/jing-pin-da-lu-you-hua-bgp-tao-can-a",
+    "promo_code": "CYXPKWN805",
+    "promo_desc": "大促通用 8.5 折循环优惠码",
     "notify_above": 0,
     "fetch": "direct"
   }
