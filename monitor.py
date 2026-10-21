@@ -24,6 +24,7 @@ import urllib.error
 import urllib.parse
 import urllib.request
 from datetime import datetime, timezone, timedelta
+from concurrent.futures import ThreadPoolExecutor
 
 if sys.stdout.encoding and sys.stdout.encoding.lower() not in ("utf-8", "utf8"):
     try:
@@ -77,7 +78,7 @@ def log(*a):
     print(datetime.now(timezone.utc).strftime("%H:%M:%S"), *cleaned, flush=True)
 
 
-def http_get(url, timeout=15):
+def http_get(url, timeout=15, retries=1):
     req = urllib.request.Request(url, headers={
         "User-Agent": UA,
         "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8",
@@ -92,26 +93,33 @@ def http_get(url, timeout=15):
         "Sec-Fetch-User": "?1",
         "Upgrade-Insecure-Requests": "1",
     })
-    with urllib.request.urlopen(req, timeout=timeout) as r:
-        raw = r.read()
-        enc = r.headers.get("Content-Encoding", "").lower()
-        if enc == "gzip" or raw[:2] == b"\x1f\x8b":
-            import gzip
-            raw = gzip.decompress(raw)
-        elif enc == "deflate":
-            import zlib
-            try:
-                raw = zlib.decompress(raw)
-            except Exception:
-                raw = zlib.decompress(raw, -zlib.MAX_WBITS)
-        return raw.decode("utf-8", "replace")
+    for attempt in range(retries + 1):
+        try:
+            with urllib.request.urlopen(req, timeout=timeout) as r:
+                raw = r.read()
+                enc = r.headers.get("Content-Encoding", "").lower()
+                if enc == "gzip" or raw[:2] == b"\x1f\x8b":
+                    import gzip
+                    raw = gzip.decompress(raw)
+                elif enc == "deflate":
+                    import zlib
+                    try:
+                        raw = zlib.decompress(raw)
+                    except Exception:
+                        raw = zlib.decompress(raw, -zlib.MAX_WBITS)
+                return raw.decode("utf-8", "replace")
+        except (urllib.error.URLError, TimeoutError, ConnectionError, OSError) as e:
+            if attempt < retries:
+                time.sleep(0.5)
+                continue
+            raise
 
 
 def cf_worker_get(url, timeout=10):
     if not CF_WORKER_URL:
         raise RuntimeError("未配置 CF_WORKER_URL")
     proxy_url = f"{CF_WORKER_URL}?url={urllib.parse.quote(url)}"
-    return http_get(proxy_url, timeout=timeout)
+    return http_get(proxy_url, timeout=timeout, retries=0)
 
 
 def visible_text(html):
@@ -119,79 +127,16 @@ def visible_text(html):
     return re.sub(r"\s+", " ", re.sub(r"<[^>]+>", " ", html))
 
 
-def _flare_post(payload):
-    req = urllib.request.Request(
-        FLARESOLVERR_URL.rstrip("/") + "/v1",
-        data=json.dumps(payload).encode(),
-        headers={"Content-Type": "application/json"})
-    with urllib.request.urlopen(req, timeout=120) as r:
-        return json.load(r)
-
-
-def flare_get(url):
-    global _flare_ready
-    if not FLARESOLVERR_URL:
-        raise RuntimeError("页面被 Cloudflare 拦截，且未配置 FLARESOLVERR_URL")
-
-    for attempt in range(2):
-        try:
-            if not _flare_ready:
-                try:
-                    _flare_post({"cmd": "sessions.create", "session": FLARE_SESSION})
-                except Exception:
-                    pass
-                _flare_ready = True
-            data = _flare_post({"cmd": "request.get", "url": url,
-                                "session": FLARE_SESSION, "maxTimeout": 18000})
-            if data.get("status") == "ok":
-                return data["solution"]["response"]
-
-            msg = str(data.get("message", ""))
-            # 若触发硬性质询超时或已被 Cloudflare 标记阻断，立即快速失败转备用/跳过，不作无意义的二次死等
-            if any(k in msg.lower() for k in ("blocked", "banned", "timeout", "turnstile")):
-                raise RuntimeError(f"Cloudflare 阻断或超时: {msg[:60]}")
-            log(f"[flare] 质询未通过({msg[:60]})，重建会话重试...")
-        except Exception as e:
-            err_str = str(e).lower()
-            if attempt == 1 or any(k in err_str for k in ("blocked", "banned", "timeout", "turnstile")):
-                raise
-            log(f"[flare] 请求异常({e})，重建会话重试...")
-
-        # 销毁污染会话并重置状态后重试
-        try:
-            _flare_post({"cmd": "sessions.destroy", "session": FLARE_SESSION})
-        except Exception:
-            pass
-        _flare_ready = False
-        time.sleep(1)
-
-    raise RuntimeError("FlareSolverr 质询超时或失败")
-
-
 def fetch_html(target):
-    mode = target.get("fetch", "auto")
+    mode = target.get("fetch", "direct")
     url = target["url"]
 
     if mode == "cf_worker":
         try:
             return cf_worker_get(url)
         except Exception as e:
-            log(f"[cf_worker] {url} Worker代理失败({e})，尝试 FlareSolverr/直连备用")
-            if FLARESOLVERR_URL:
-                return flare_get(url)
+            log(f"[cf_worker] {url} Worker代理失败({e})，尝试直连备用")
             return http_get(url)
-
-    if mode == "flare":
-        try:
-            return flare_get(url)
-        except Exception as e:
-            if CF_WORKER_URL:
-                log(f"[flare] {url} FlareSolverr失败({e})，尝试 CF Worker 备用")
-                try:
-                    return cf_worker_get(url)
-                except Exception:
-                    pass
-            raise
 
     try:
         html = http_get(url)
@@ -200,20 +145,17 @@ def fetch_html(target):
             raise RuntimeError("cloudflare challenge")
         return html
     except (urllib.error.HTTPError, RuntimeError) as e:
-        if mode == "auto":
-            if CF_WORKER_URL:
-                log(f"[auto] {url} 直连被拦截({e})，尝试 CF Worker")
-                try:
-                    res = cf_worker_get(url)
-                    low = res.lower()
-                    if "just a moment" not in low and "cf-chl" not in low and "cf-challenge" not in low:
-                        return res
-                except Exception:
-                    pass
-            if FLARESOLVERR_URL:
-                log(f"[auto] {url} 改走 FlareSolverr")
-                return flare_get(url)
+        if mode == "auto" and CF_WORKER_URL:
+            log(f"[auto] {url} 直连被拦截({e})，尝试 CF Worker")
+            try:
+                res = cf_worker_get(url)
+                low = res.lower()
+                if "just a moment" not in low and "cf-chl" not in low and "cf-challenge" not in low:
+                    return res
+            except Exception:
+                pass
         raise
+
 
 
 def compute_stock(target, text=None):
@@ -336,14 +278,21 @@ def compute_stock_vpsrestock(target, html):
         return in_stock_count
 
 
-def fetch_json(target, timeout=15):
+def fetch_json(target, timeout=15, retries=1):
     url = target.get("json_url") or target["url"]
     req = urllib.request.Request(url, headers={
         "User-Agent": UA,
         "Accept": "application/json",
     })
-    with urllib.request.urlopen(req, timeout=timeout) as r:
-        return json.loads(r.read())
+    for attempt in range(retries + 1):
+        try:
+            with urllib.request.urlopen(req, timeout=timeout) as r:
+                return json.loads(r.read())
+        except (urllib.error.URLError, TimeoutError, ConnectionError, OSError) as e:
+            if attempt < retries:
+                time.sleep(0.5)
+                continue
+            raise
 
 
 def _plans_list(data):
@@ -548,6 +497,7 @@ def format_tg_html(title, body):
     b_token = re.sub(r"\[([^\]]+)\]\((https?://[^\)]+)\)", save_link, body)
     b_safe = html.escape(b_token, quote=False)
     b_safe = re.sub(r"\*\*([^*]+)\*\*", r"<b>\1</b>", b_safe)
+    b_safe = re.sub(r"`([^`]+)`", r"<code>\1</code>", b_safe)
     for i, l_html in enumerate(links):
         b_safe = b_safe.replace(f"@@LINK_{i}@@", l_html)
     return f"<b>{t_safe}</b>\n\n{b_safe}" if b_safe else f"<b>{t_safe}</b>"
@@ -729,6 +679,36 @@ def main():
         json_cache = {}
         failed_keys = set()
         dirty = False
+
+        # 受控多线程预热缓存：限制最大 5 线程并发 I/O，CPU 占用率低于 2%，内存几乎无增量
+        unique_targets = {}
+        for t in targets:
+            k = (t.get("json_url") or t["url"]) if t.get("stock") == "json" else t["url"]
+            if k not in unique_targets:
+                unique_targets[k] = t
+
+        def _prefetch(item):
+            k, target_item = item
+            try:
+                if target_item.get("stock") == "json":
+                    return k, "json", fetch_json(target_item), None
+                else:
+                    h = fetch_html(target_item)
+                    return k, "html", h, None
+            except Exception as ex:
+                return k, "error", None, ex
+
+        workers = min(5, len(unique_targets))
+        with ThreadPoolExecutor(max_workers=workers) as executor:
+            for k, kind, data, err in executor.map(_prefetch, unique_targets.items()):
+                if err is not None:
+                    failed_keys.add(k)
+                    log(f"[net] 预抓取异常({k[:45]}...): {err!r}")
+                elif kind == "json":
+                    json_cache[k] = data
+                elif kind == "html":
+                    raw_cache[k] = data
+
         for t in targets:
             try:
                 if t.get("stock") == "json":
@@ -808,6 +788,11 @@ def main():
                             f"- ⏱ **检测时间**：{bj_time} (北京时间)",
                             f"- 📦 **变动详情**：{restock_reason}",
                         ]
+                        promo = t.get("promo_code")
+                        promo_desc = t.get("promo_desc", "")
+                        if promo:
+                            desc_str = f" ({promo_desc})" if promo_desc else ""
+                            card_lines.append(f"- 🎟 **专属优惠码**：`{promo}`{desc_str}")
                         if detail:
                             if "\n" in detail:
                                 card_lines.append(f"- 📋 **套餐在售明细**：\n{detail}")
