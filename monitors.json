@@ -181,5 +181,36 @@
     "promo_desc": "大促通用 8.5 折循环优惠码",
     "notify_above": 0,
     "fetch": "direct"
+  },
+  {
+    "name": "【周年庆主会场】GreenCloud 绿云 - 13周年日本软银 (2222/6666/8888/9999)",
+    "url": "https://greencloudvps.com/billing/store/13th-birthday-sale",
+    "stock": "whmcs",
+    "filter_pattern": "Softbank|JPSB",
+    "fallback_filter_pattern": "2222|6666|8888|9999|1010|1111|1212|1313|JP|Japan|Tokyo|Osaka",
+    "buy_url": "https://greencloudvps.com/billing/store/13th-birthday-sale",
+    "promo_desc": "周年庆常规活动款 (2222 $22/年、6666 $66/3年等)，认准 Tokyo/Osaka Softbank 线路",
+    "notify_above": 0,
+    "fetch": "direct"
+  },
+  {
+    "name": "【特惠精选】GreenCloud 绿云 - 日本软银 Budget KVM ($25/年起)",
+    "url": "https://greencloudvps.com/billing/store/budget-kvm-sale",
+    "stock": "whmcs",
+    "filter_pattern": "Softbank|BudgetKVMJP-(?:2|3)",
+    "buy_url": "https://greencloudvps.com/billing/store/budget-kvm-sale",
+    "promo_desc": "BudgetKVMJP-2 ($25/年 2C4G) / JP-3 ($45/年 4C8G)，周年庆三年付可工单翻倍内存+流量",
+    "notify_above": 0,
+    "fetch": "direct"
+  },
+  {
+    "name": "【特惠精选】GreenCloud 绿云 - 日本软银 EPYC NVMe ($25/年起)",
+    "url": "https://greencloudvps.com/billing/store/premium-kvm-sale",
+    "stock": "whmcs",
+    "filter_pattern": "Softbank|EPYCJP-(?:1|2|3)",
+    "buy_url": "https://greencloudvps.com/billing/store/premium-kvm-sale",
+    "promo_desc": "EPYCJP-1 ($25/年 1C2G) / JP-2 ($35/年 2C3G) / JP-3 ($68/年 4C8G)，周年庆三年付可工单翻倍内存+流量",
+    "notify_above": 0,
+    "fetch": "direct"
   }
 ]
