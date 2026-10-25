@@ -220,11 +220,63 @@ def compute_stock(target, text=None):
     if mode == "vpsrestock":
         return compute_stock_vpsrestock(target, text)
 
+    if mode == "whmcs":
+        return compute_stock_whmcs(target, text)
+
     if "pattern" in target and target["pattern"]:
         m = re.search(target["pattern"], text)
         return int(m.group(1)) if m else None
 
     return 1
+
+
+def compute_stock_whmcs(target, raw_html):
+    """解析 WHMCS 标准购物车分类页（如 GreenCloud 绿云）：逐个商品卡片提取名称/库存/配置，
+    按 filter_pattern（匹配卡片全文，可命中线路/机房关键词如 Softbank）过滤后统计有货款数。
+    - 卡片显示 "N Available"：N>0 视为有货，N=0 视为缺货；
+    - 卡片无库存数字但有订购按钮：视为不限量有货；
+    - 分类已创建但无可见商品（活动未开始/全部下架）：返回 0，以便上架瞬间触发 0→N 补货通知；
+    - 页面结构异常（既无商品卡片也无空分类提示）：返回 None 安全跳过，避免误报。"""
+    target.pop("_detail", None)
+    blocks = re.findall(r'<div class="product clearfix" id="product\d+">([\s\S]*?)</footer>', raw_html)
+    if not blocks:
+        if re.search(r"does not contain any visible products|没有可见的产品|没有可显示的产品", raw_html, re.I):
+            return 0
+        log(f"[warn] {target['name']}: WHMCS 分类页未解析到商品卡片，也无空分类提示，疑似页面异常，安全跳过")
+        return None
+
+    pat = target.get("filter_pattern", "")
+    fallback_pat = target.get("fallback_filter_pattern", "")
+    parsed_blocks = []
+    for blk in blocks:
+        name_m = re.search(r'id="product\d+-name">([\s\S]*?)</span>', blk)
+        name = visible_text(name_m.group(1)).strip() if name_m else "?"
+        text = visible_text(blk).strip()
+        parsed_blocks.append((name, text))
+
+    active_pat = pat
+    if pat and fallback_pat:
+        if not any(re.search(pat, text, re.I) for _, text in parsed_blocks):
+            active_pat = fallback_pat
+
+    in_stock = []
+    for name, text in parsed_blocks:
+        if active_pat and not re.search(active_pat, text, re.I):
+            continue
+        qty_m = re.search(r"(\d+)\s*(?:Available|可用)", text, re.I)
+        qty = int(qty_m.group(1)) if qty_m else None
+        has_order = re.search(r"Order Now|立即订购|Add to Cart|加入购物车", text, re.I)
+        if (qty is not None and qty > 0) or (qty is None and has_order):
+            price_m = re.search(r"\$[\d.]+\s*USD\s*[A-Za-z\-]*", text)
+            label = f"· {name}"
+            if qty:
+                label += f"（剩 {qty} 台）"
+            if price_m:
+                label += f" {price_m.group(0).strip()}"
+            in_stock.append(label)
+    if in_stock:
+        target["_detail"] = "在售型号:\n" + "\n".join(in_stock)
+    return len(in_stock)
 
 
 def compute_stock_vpsrestock(target, html):
@@ -380,7 +432,7 @@ def stock_text(target, n):
     mode = target.get("stock", "count")
     if mode == "badge" or (mode == "vpsrestock" and target.get("vpsrestock_mode") == "single"):
         return "有货" if n else "缺货 (0 Available)"
-    if mode == "category" or target.get("json_pick") == "count_in_stock" or (mode == "vpsrestock" and target.get("vpsrestock_mode") == "category"):
+    if mode in ("category", "whmcs") or target.get("json_pick") == "count_in_stock" or (mode == "vpsrestock" and target.get("vpsrestock_mode") == "category"):
         return f"有货 ({n} 款在售/补货)" if n else "全分类售罄"
     return f"{n} 台"
 
@@ -724,7 +776,7 @@ def main():
                         continue
                     if key not in raw_cache:
                         raw_cache[key] = fetch_html(t)
-                    if t.get("stock") == "vpsrestock":
+                    if t.get("stock") in ("vpsrestock", "whmcs"):
                         n = compute_stock(t, raw_cache[key])
                     else:
                         if key not in text_cache:
@@ -766,7 +818,7 @@ def main():
                     is_restock = True
                     restock_reason = f"缺货上架（现已可购: {stock_text(t, n)}）"
                 # 判定 2：分类模式增量补货（例如 1 款增至 3 款，说明上了特惠新款或原有缺货款恢复）
-                elif (t.get("stock") == "category" or (t.get("stock") == "vpsrestock" and t.get("vpsrestock_mode") == "category")) and n > old > threshold:
+                elif (t.get("stock") in ("category", "whmcs") or (t.get("stock") == "vpsrestock" and t.get("vpsrestock_mode") == "category")) and n > old > threshold:
                     is_restock = True
                     restock_reason = f"新增在售款式（由 {old} 款增至 {n} 款）"
                 # 判定 3：数字库存大幅补货（之前仅剩少量尾货 <=5 台，突然批量补充 >=5 台）
@@ -793,6 +845,8 @@ def main():
                         if promo:
                             desc_str = f" ({promo_desc})" if promo_desc else ""
                             card_lines.append(f"- 🎟 **专属优惠码**：`{promo}`{desc_str}")
+                        elif promo_desc:
+                            card_lines.append(f"- 💡 **优惠提示**：{promo_desc}")
                         if detail:
                             if "\n" in detail:
                                 card_lines.append(f"- 📋 **套餐在售明细**：\n{detail}")
