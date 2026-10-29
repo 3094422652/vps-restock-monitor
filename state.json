@@ -9,12 +9,18 @@
  "【单品精选】ZgoCloud - 洛杉矶 9929 Starter": 0,
  "【全分类】DMIT - 洛杉矶 Eyeball (9929/CMIN2) 全线": 0,
  "【单品精选】DMIT - 洛杉矶 Eyeball 特惠款 (TINY/Pocket/WEE)": 0,
- "【全分类】AcckCloud - 洛杉矶 9929 全线": 4,
- "【单品精选】AcckCloud - 洛杉矶 9929 MINI (¥19.99/月)": 0,
+ "【全分类】AcckCloud - 洛杉矶 9929 全线": 5,
+ "【单品精选】AcckCloud - 洛杉矶 9929 MINI (¥19.99/月)": 1,
  "【全分类】V.PS - 圣何塞 9929 Cloud KVM 全线": 0,
  "【单品精选】V.PS - 圣何塞 9929 Starter特惠": 0,
  "【单品精选】CloudSilk 白丝云 - 圣何塞 9929 丐版套餐A (¥239.99/年)": 0,
  "【周年庆主会场】GreenCloud 绿云 - 13周年日本软银 (2222/6666/8888/9999)": 0,
  "【特惠精选】GreenCloud 绿云 - 日本软银 Budget KVM ($25/年起)": 0,
- "【特惠精选】GreenCloud 绿云 - 日本软银 EPYC NVMe ($25/年起)": 0
+ "【特惠精选】GreenCloud 绿云 - 日本软银 EPYC NVMe ($25/年起)": 0,
+ "_meta": {
+  "oos_streak": {},
+  "last_notified": {
+   "【单品精选】AcckCloud - 洛杉矶 9929 MINI (¥19.99/月)": 1793291107
+  }
+ }
 }
