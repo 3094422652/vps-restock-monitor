@@ -5,7 +5,7 @@
  "【单品精选】VMISS - 洛杉矶 9929 Basic": 0,
  "【单品精选】VMISS - 洛杉矶 9929 Core": 0,
  "【特惠精选】VMISS - 洛杉矶 TRI 三网优化 (Basic/Core)": 0,
- "【全分类】ZgoCloud - 洛杉矶 9929&CMIN2 全线": 2,
+ "【全分类】ZgoCloud - 洛杉矶 9929&CMIN2 全线": 1,
  "【单品精选】ZgoCloud - 洛杉矶 9929 Starter": 1,
  "【全分类】DMIT - 洛杉矶 Eyeball (9929/CMIN2) 全线": 0,
  "【单品精选】DMIT - 洛杉矶 Eyeball 特惠款 (TINY/Pocket/WEE)": 0,
@@ -16,10 +16,9 @@
  "【单品精选】CloudSilk 白丝云 - 圣何塞 9929 丐版套餐A (¥239.99/年)": 0,
  "【单品精选】GreenCloud 绿云 - 日本软银 EPYCJP-1 ($25/年)": 0,
  "_meta": {
-  "oos_streak": {},
-  "last_notified": {
-   "【全分类】ZgoCloud - 洛杉矶 9929&CMIN2 全线": 1794138722,
-   "【单品精选】ZgoCloud - 洛杉矶 9929 Starter": 1794138726
-  }
+  "oos_streak": {
+   "【单品精选】ZgoCloud - 洛杉矶 9929 Starter": 1
+  },
+  "last_notified": {}
  }
 }
