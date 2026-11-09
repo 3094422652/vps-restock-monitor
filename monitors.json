@@ -23,9 +23,9 @@
     "name": "【单品精选】DigitalVirt - 洛杉矶 9929 L1-2C1G (¥39/月)",
     "url": "https://digitalvirt.com/store/la-vps",
     "stock": "badge",
-    "verify_pattern": "L1-2C1G",
-    "oos_pattern": "L1-2C1G[\\s\\S]{0,150}?(?:缺货|售罄|已售罄|无货|Out of Stock)",
-    "in_stock_pattern": "L1-2C1G[\\s\\S]{0,150}?(?:立即订购|Order Now|立即购买)",
+    "verify_pattern": "L1-(?:1C1G|2C1G)",
+    "oos_pattern": "L1-(?:1C1G|2C1G)[\\s\\S]{0,150}?(?:缺货|售罄|已售罄|无货|Out of Stock)",
+    "in_stock_pattern": "L1-(?:1C1G|2C1G)[\\s\\S]{0,150}?(?:立即订购|Order Now|立即购买)",
     "buy_url": "https://digitalvirt.com/store/la-vps",
     "notify_above": 0,
     "fetch": "direct"
