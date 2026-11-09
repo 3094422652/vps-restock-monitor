@@ -46,14 +46,11 @@ TG_TOKEN = os.environ.get("TG_TOKEN", "")
 TG_CHAT = os.environ.get("TG_CHAT", "")
 PUSHPLUS_TOKEN = os.environ.get("PUSHPLUS_TOKEN", "")   # PushPlus token（微信推送通道）
 WEIXIN_HEARTBEAT = os.environ.get("WEIXIN_HEARTBEAT") == "1"  # 微信渠道是否也发心跳（默认只发补货警报）
-FLARESOLVERR_URL = os.environ.get("FLARESOLVERR_URL", "")
 CF_WORKER_URL = os.environ.get("CF_WORKER_URL", "").rstrip("/")
 ALLOW_STATE_COMMIT = os.environ.get("ALLOW_STATE_COMMIT") == "1"
 UA = ("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
       "(KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36")
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-FLARE_SESSION = "vpsmon"
-_flare_ready = False
 
 
 def sanitize_secret(val):
@@ -165,6 +162,7 @@ def compute_stock(target, text=None):
     - category 模式：统计可订购匹配数。若为 0 且页面未出现任何缺货/售罄特征，说明渲染未就绪返回 None；
     - json 模式：读接口字段。
     """
+    target.pop("_detail", None)
     mode = target.get("stock", "count")
 
     if mode == "badge":
@@ -259,10 +257,16 @@ def compute_stock_whmcs(target, raw_html):
         if not any(re.search(pat, text, re.I) for _, text in parsed_blocks):
             active_pat = fallback_pat
 
+    matched_blocks = [
+        (name, text) for name, text in parsed_blocks
+        if not active_pat or re.search(active_pat, text, re.I)
+    ]
+    if active_pat and not matched_blocks:
+        log(f"[warn] {target['name']}: WHMCS 页面未匹配到指定商品特征({active_pat})，安全跳过")
+        return None
+
     in_stock = []
-    for name, text in parsed_blocks:
-        if active_pat and not re.search(active_pat, text, re.I):
-            continue
+    for name, text in matched_blocks:
         qty_m = re.search(r"(\d+)\s*(?:Available|可用)", text, re.I)
         qty = int(qty_m.group(1)) if qty_m else None
         has_order = re.search(r"Order Now|立即订购|Add to Cart|加入购物车", text, re.I)
@@ -613,13 +617,32 @@ def save_and_commit_state(state, oos_streak=None, last_notified=None):
                 continue
             subprocess.run(("git", "reset", "--mixed", "FETCH_HEAD"), capture_output=True)
 
-            # 3. 与远端 state.json 智能合并（双向合并，绝不丢失任何并发工作流写回的状态）
-            try:
-                with open(path, "r", encoding="utf-8") as rf:
-                    merged = json.load(rf)
-            except Exception:
-                merged = {}
-            merged.update(save_data)
+            # 3. 与远端 FETCH_HEAD 的 state.json 智能合并（通过 git show 读取真实远端版本，绝不丢失并发冷却锁）
+            remote_obj = {}
+            show_res = subprocess.run(
+                ("git", "show", "FETCH_HEAD:state.json"),
+                capture_output=True, text=True, encoding="utf-8", errors="replace"
+            )
+            if show_res.returncode == 0 and show_res.stdout.strip():
+                try:
+                    remote_obj = json.loads(show_res.stdout)
+                except Exception:
+                    remote_obj = {}
+            merged = {k: v for k, v in remote_obj.items() if k in save_data and k != "_meta"}
+            merged.update({k: v for k, v in save_data.items() if k != "_meta"})
+            remote_meta = remote_obj.get("_meta", {}) if isinstance(remote_obj, dict) else {}
+            remote_cd = remote_meta.get("last_notified", {}) if isinstance(remote_meta, dict) else {}
+            now_ts = time.time()
+            merged_cd = {
+                k: int(v) for k, v in remote_cd.items()
+                if isinstance(v, (int, float)) and now_ts - v < 3600
+            }
+            merged_cd.update(clean_cooldown)
+            if clean_streak or merged_cd:
+                merged["_meta"] = {
+                    "oos_streak": clean_streak,
+                    "last_notified": merged_cd,
+                }
             with open(path, "w", encoding="utf-8") as wf:
                 json.dump(merged, wf, ensure_ascii=False, indent=1)
 
@@ -818,7 +841,11 @@ def main():
                     is_restock = True
                     restock_reason = f"缺货上架（现已可购: {stock_text(t, n)}）"
                 # 判定 2：分类模式增量补货（例如 1 款增至 3 款，说明上了特惠新款或原有缺货款恢复）
-                elif (t.get("stock") in ("category", "whmcs") or (t.get("stock") == "vpsrestock" and t.get("vpsrestock_mode") == "category")) and n > old > threshold:
+                elif (
+                    t.get("stock") in ("category", "whmcs")
+                    or (t.get("stock") == "vpsrestock" and t.get("vpsrestock_mode") == "category")
+                    or (t.get("stock") == "json" and t.get("json_pick") == "count_in_stock")
+                ) and n > old > threshold:
                     is_restock = True
                     restock_reason = f"新增在售款式（由 {old} 款增至 {n} 款）"
                 # 判定 3：数字库存大幅补货（之前仅剩少量尾货 <=5 台，突然批量补充 >=5 台）
