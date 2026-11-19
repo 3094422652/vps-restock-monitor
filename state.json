@@ -9,8 +9,8 @@
  "【单品精选】ZgoCloud - 洛杉矶 9929 Starter": 1,
  "【全分类】DMIT - 洛杉矶 Eyeball (9929/CMIN2) 全线": 0,
  "【单品精选】DMIT - 洛杉矶 Eyeball 特惠款 (TINY/Pocket/WEE)": 0,
- "【全分类】AcckCloud - 洛杉矶 9929 全线": 4,
- "【单品精选】AcckCloud - 洛杉矶 9929 MINI (¥19.99/月)": 0,
+ "【全分类】AcckCloud - 洛杉矶 9929 全线": 5,
+ "【单品精选】AcckCloud - 洛杉矶 9929 MINI (¥19.99/月)": 1,
  "【全分类】V.PS - 圣何塞 9929 Cloud KVM 全线": 0,
  "【单品精选】V.PS - 圣何塞 9929 Starter特惠": 0,
  "【单品精选】CloudSilk 白丝云 - 圣何塞 9929 丐版套餐A (¥239.99/年)": 0,
@@ -19,7 +19,9 @@
   "oos_streak": {},
   "last_notified": {
    "【全分类】ZgoCloud - 洛杉矶 9929&CMIN2 全线": 1795073101,
-   "【单品精选】ZgoCloud - 洛杉矶 9929 Starter": 1795073104
+   "【单品精选】ZgoCloud - 洛杉矶 9929 Starter": 1795073104,
+   "【全分类】AcckCloud - 洛杉矶 9929 全线": 1795075982,
+   "【单品精选】AcckCloud - 洛杉矶 9929 MINI (¥19.99/月)": 1795075985
   }
  }
 }
