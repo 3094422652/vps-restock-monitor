@@ -395,6 +395,9 @@ def compute_stock_json(target, data=None):
     spec = target.get("json_find_plans")
     plans = _json_find(data, spec) if spec else _plans_list(data)
     plans = _sellable(plans)
+    pat = target.get("filter_pattern")
+    if pat:
+        plans = [p for p in plans if re.search(pat, str(p.get("name") or p.get("plan_name") or ""), re.I)]
     stock_field = target.get("json_stock_field", "stockAvailable")
     pick = target.get("json_pick", "cheapest")
 
