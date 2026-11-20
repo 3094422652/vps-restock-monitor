@@ -1,20 +1,10 @@
 [
   {
-    "name": "【全分类】DigitalVirt - 洛杉矶 9929 旗舰全线",
-    "url": "https://digitalvirt.com/store/la-vps",
-    "stock": "category",
-    "available_pattern": "(?:立即订购|Order Now|立即购买)",
-    "category_oos_pattern": "(?:缺货|售罄|已售罄|Out of Stock)",
-    "buy_url": "https://digitalvirt.com/store/la-vps",
-    "notify_above": 0,
-    "fetch": "direct"
-  },
-  {
-    "name": "【全分类】DigitalVirt - 洛杉矶轻量 9929",
+    "name": "【特惠精选】DigitalVirt - 洛杉矶轻量 9929 (Mini-L1/L2)",
     "url": "https://digitalvirt.com/store/lightvm-9929",
     "stock": "category",
-    "available_pattern": "(?:立即订购|Order Now|立即购买)",
-    "category_oos_pattern": "(?:缺货|售罄|已售罄|Out of Stock)",
+    "available_pattern": "Mini-L[12]\\b(?:(?!Mini-)[\\s\\S]){0,150}?(?:立即订购|Order Now|立即购买)",
+    "category_oos_pattern": "Mini-L[12]\\b(?:(?!Mini-)[\\s\\S]){0,150}?(?:缺货|售罄|已售罄|Out of Stock)",
     "buy_url": "https://digitalvirt.com/store/lightvm-9929",
     "notify_above": 0,
     "fetch": "direct"
@@ -67,10 +57,10 @@
     "fetch": "direct"
   },
   {
-    "name": "【全分类】ZgoCloud - 洛杉矶 9929&CMIN2 全线",
+    "name": "【特惠精选】ZgoCloud - 洛杉矶 9929&CMIN2 (Starter/Standard)",
     "url": "https://vpsrestock.com/zgocloud/",
     "stock": "vpsrestock",
-    "filter_pattern": "Los Angeles AMD Optimised VPS",
+    "filter_pattern": "Los Angeles AMD Optimised VPS.*(?:Starter|Standard)",
     "vpsrestock_mode": "category",
     "buy_url": "https://clients.zgovps.com/index.php?/cart/los-angeles-amd-optimised-vps/",
     "notify_above": 0,
@@ -107,7 +97,7 @@
     "fetch": "direct"
   },
   {
-    "name": "【全分类】AcckCloud - 洛杉矶 9929 全线",
+    "name": "【特惠精选】AcckCloud - 洛杉矶 9929 (MINI/PLUS)",
     "url": "https://acckcloud.com/api/sales-catalog",
     "stock": "json",
     "json_url": "https://acckcloud.com/api/sales-catalog",
@@ -121,6 +111,7 @@
         }
       ]
     },
+    "filter_pattern": "MINI|PLUS",
     "json_stock_field": "stock",
     "json_pick": "count_in_stock",
     "buy_url": "https://acckcloud.com/store/server",
