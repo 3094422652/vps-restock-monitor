@@ -398,6 +398,8 @@ def compute_stock_json(target, data=None):
     pat = target.get("filter_pattern")
     if pat:
         plans = [p for p in plans if re.search(pat, str(p.get("name") or p.get("plan_name") or ""), re.I)]
+    if not plans:
+        raise RuntimeError(f"未在接口中匹配到任何有效套餐 (filter_pattern={pat})")
     stock_field = target.get("json_stock_field", "stockAvailable")
     pick = target.get("json_pick", "cheapest")
 
@@ -631,14 +633,13 @@ def save_and_commit_state(state, oos_streak=None, last_notified=None):
                     remote_obj = json.loads(show_res.stdout)
                 except Exception:
                     remote_obj = {}
-            merged = {k: v for k, v in remote_obj.items() if k in save_data and k != "_meta"}
-            merged.update({k: v for k, v in save_data.items() if k != "_meta"})
+            merged = {k: v for k, v in save_data.items() if k != "_meta"}
             remote_meta = remote_obj.get("_meta", {}) if isinstance(remote_obj, dict) else {}
             remote_cd = remote_meta.get("last_notified", {}) if isinstance(remote_meta, dict) else {}
             now_ts = time.time()
             merged_cd = {
                 k: int(v) for k, v in remote_cd.items()
-                if isinstance(v, (int, float)) and now_ts - v < 3600
+                if k in merged and isinstance(v, (int, float)) and now_ts - v < 3600
             }
             merged_cd.update(clean_cooldown)
             if clean_streak or merged_cd:
