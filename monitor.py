@@ -325,7 +325,11 @@ def compute_stock_vpsrestock(target, html):
         return None
 
     if mode == "single":
-        return 1 if any(st == 1 for _, st in matching) else 0
+        in_stock_names = [disp for disp, st in matching if st == 1]
+        if in_stock_names:
+            target["_detail"] = " / ".join(in_stock_names)
+            return 1
+        return 0
     else:
         in_stock_count = sum(st for _, st in matching)
         in_stock_names = [disp for disp, st in matching if st == 1]
@@ -422,8 +426,16 @@ def compute_stock_json(target, data=None):
         plan = next((p for p in plans if p.get("id") == target.get("plan_id")), None)
         if plan is None:
             raise RuntimeError(f'plan {target.get("plan_id")} 不存在或已下架')
-        target["_detail"] = fmt(plan)
-        return 1 if (plan.get(stock_field) if isinstance(plan.get(stock_field), (int, float)) else bool(plan.get(stock_field))) else 0
+        qty = plan.get(stock_field)
+        if isinstance(qty, (int, float)):
+            if qty > 0:
+                target["_detail"] = f"{plan_label(plan)}（当前剩余 {int(qty)} 台）"
+                return 1
+            return 0
+        if bool(qty):
+            target["_detail"] = plan_label(plan)
+            return 1
+        return 0
     if pick == "cheapest":
         best = min(plans, key=lambda p: (p.get("monthly_price_cents", p.get("price", 0)) if isinstance(p.get("price") or p.get("monthly_price_cents"), (int, float)) else 1e18))
         target["_detail"] = fmt(best)
@@ -439,7 +451,12 @@ def compute_stock_json(target, data=None):
 
 def stock_text(target, n):
     mode = target.get("stock", "count")
-    if mode == "badge" or (mode == "vpsrestock" and target.get("vpsrestock_mode") == "single"):
+    if (
+        mode == "badge"
+        or (mode == "vpsrestock" and target.get("vpsrestock_mode") == "single")
+        or (mode == "json" and target.get("json_pick") == "plan_id")
+        or (mode == "whmcs" and target.get("whmcs_mode") == "single")
+    ):
         return "有货" if n else "缺货 (0 Available)"
     if mode in ("category", "whmcs") or target.get("json_pick") == "count_in_stock" or (mode == "vpsrestock" and target.get("vpsrestock_mode") == "category"):
         return f"有货 ({n} 款在售/补货)" if n else "全分类售罄"
@@ -871,6 +888,12 @@ def main():
                             f"- ⏱ **检测时间**：{bj_time} (北京时间)",
                             f"- 📦 **变动详情**：{restock_reason}",
                         ]
+                        specs = t.get("specs")
+                        price = t.get("price")
+                        if specs:
+                            card_lines.append(f"- 🖥 **套餐配置**：{specs}")
+                        if price:
+                            card_lines.append(f"- 💰 **参考价格**：{price}")
                         promo = t.get("promo_code")
                         promo_desc = t.get("promo_desc", "")
                         if promo:
@@ -880,9 +903,9 @@ def main():
                             card_lines.append(f"- 💡 **优惠提示**：{promo_desc}")
                         if detail:
                             if "\n" in detail:
-                                card_lines.append(f"- 📋 **套餐在售明细**：\n{detail}")
+                                card_lines.append(f"- 📋 **在售库存明细**：\n{detail}")
                             else:
-                                card_lines.append(f"- 📋 **套餐信息**：{detail}")
+                                card_lines.append(f"- 📋 **在售库存明细**：{detail}")
                         card_lines.append(f"- 🛒 **购买直链**：[点击立即前往官网购买]({buy_link})")
                         card_lines.append("\n*(热门套餐库存极快耗尽，建议点击直链迅速锁定订单)*")
 
