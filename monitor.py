@@ -163,6 +163,8 @@ def compute_stock(target, text=None):
     - json 模式：读接口字段。
     """
     target.pop("_detail", None)
+    target.pop("_live_specs", None)
+    target.pop("_live_price", None)
     mode = target.get("stock", "count")
 
     if mode == "badge":
@@ -298,19 +300,24 @@ def compute_stock_vpsrestock(target, html):
                         avail = prod.get("offers", {}).get("availability", "")
                         in_stock = 1 if "InStock" in avail else 0
                         key = re.sub(r"[\s·・\-_]+", " ", name).lower().strip()
-                        products[key] = (name, in_stock)
+                        products[key] = (name, in_stock, "", "")
             except Exception:
                 pass
 
-    row_pattern = r'<div class="row\s+([^"]+)"[\s\S]*?<div class="name">([\s\S]*?)</div>'
-    for m in re.finditer(row_pattern, html):
-        cls, n_html = m.group(1), m.group(2)
-        clean_name = re.sub(r"<[^>]+>", " ", n_html).strip()
+    row_blocks = re.findall(r'<div class="row\s+([^"]+)"[^>]*>([\s\S]*?)(?=<div class="row\s+|<footer|</main|$)', html)
+    for cls, blk in row_blocks:
+        n_m = re.search(r'<div class="name">([\s\S]*?)</div>', blk)
+        if not n_m:
+            continue
+        clean_name = re.sub(r"<[^>]+>", " ", n_m.group(1)).strip()
         clean_name = re.sub(r"\s+", " ", clean_name)
         in_stock = 1 if "in" in cls.split() else 0
+        spec_pairs = re.findall(r'<span class="k">([\s\S]*?)</span>\s*<span class="sv">([\s\S]*?)</span>', blk)
+        live_specs = " / ".join(f"{visible_text(k).strip()} {visible_text(v).strip()}" for k, v in spec_pairs) if spec_pairs else ""
+        p_m = re.search(r'<span class="price">([\s\S]*?)</span>', blk)
+        live_price = visible_text(p_m.group(1)).strip() if p_m else ""
         key = re.sub(r"[\s·・\-_]+", " ", clean_name).lower().strip()
-        if key not in products:
-            products[key] = (clean_name, in_stock)
+        products[key] = (clean_name, in_stock, live_specs, live_price)
 
     if not products:
         log(f"[warn] {target['name']}: vpsrestock 页面未解析到任何商品")
@@ -319,20 +326,27 @@ def compute_stock_vpsrestock(target, html):
     pat = target.get("filter_pattern", "")
     mode = target.get("vpsrestock_mode", "single")
 
-    matching = [(disp, st) for key, (disp, st) in products.items() if re.search(pat, disp, re.I)]
+    matching = [(disp, st, sp, pr) for key, (disp, st, sp, pr) in products.items() if re.search(pat, disp, re.I)]
     if not matching:
         log(f"[warn] {target['name']}: 未在列表中匹配到指定特征({pat})")
         return None
 
+    first_sp = next((sp for _, _, sp, _ in matching if sp), "")
+    first_pr = next((pr for _, _, _, pr in matching if pr), "")
+    if first_sp:
+        target["_live_specs"] = first_sp
+    if first_pr:
+        target["_live_price"] = first_pr
+
     if mode == "single":
-        in_stock_names = [disp for disp, st in matching if st == 1]
+        in_stock_names = [disp for disp, st, _, _ in matching if st == 1]
         if in_stock_names:
             target["_detail"] = " / ".join(in_stock_names)
             return 1
         return 0
     else:
-        in_stock_count = sum(st for _, st in matching)
-        in_stock_names = [disp for disp, st in matching if st == 1]
+        in_stock_count = sum(st for _, st, _, _ in matching)
+        in_stock_names = [disp for disp, st, _, _ in matching if st == 1]
         if in_stock_names:
             target["_detail"] = "在售型号:\n" + "\n".join(f"· {n}" for n in in_stock_names)
         return in_stock_count
@@ -431,6 +445,11 @@ def compute_stock_json(target, data=None):
         plan = next((p for p in plans if p.get("id") == target.get("plan_id")), None)
         if plan is None:
             raise RuntimeError(f'plan {target.get("plan_id")} 不存在或已下架')
+        bw_str = f" / {plan.get('bandwidth')}Mbps带宽" if plan.get("bandwidth") else ""
+        flow_val = plan.get("traffic") or plan.get("flow", 0)
+        target["_live_specs"] = f"{plan.get('cpu')}核 / {plan.get('memory')}MB内存 / {plan.get('disk')}G SSD / {flow_val}G月流量{bw_str}"
+        if "monthly_price_cents" in plan:
+            target["_live_price"] = f"¥{plan['monthly_price_cents'] / 100:g}/月"
         qty = plan.get(stock_field)
         if isinstance(qty, (int, float)):
             if qty > 0:
@@ -893,8 +912,8 @@ def main():
                             f"- ⏱ **检测时间**：{bj_time} (北京时间)",
                             f"- 📦 **变动详情**：{restock_reason}",
                         ]
-                        specs = t.get("specs")
-                        price = t.get("price")
+                        specs = t.pop("_live_specs", None) or t.get("specs")
+                        price = t.get("price") or t.pop("_live_price", None)
                         if specs:
                             card_lines.append(f"- 🖥 **套餐配置**：{specs}")
                         if price:
