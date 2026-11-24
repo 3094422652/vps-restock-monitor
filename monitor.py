@@ -396,13 +396,18 @@ def _json_find(data, spec):
 def compute_stock_json(target, data=None):
     if data is None:
         data = fetch_json(target)
+    all_plans = _plans_list(data)
+    if not all_plans:
+        raise RuntimeError("接口返回套餐列表为空")
     spec = target.get("json_find_plans")
-    plans = _json_find(data, spec) if spec else _plans_list(data)
+    plans = _json_find(data, spec) if spec else all_plans
     plans = _sellable(plans)
     pat = target.get("filter_pattern")
     if pat:
         plans = [p for p in plans if re.search(pat, str(p.get("name") or p.get("plan_name") or ""), re.I)]
     if not plans:
+        if target.get("allow_missing"):
+            return 0
         raise RuntimeError(f"未在接口中匹配到任何有效套餐 (filter_pattern={pat})")
     stock_field = target.get("json_stock_field", "stockAvailable")
     pick = target.get("json_pick", "cheapest")
